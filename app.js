@@ -882,6 +882,11 @@ function renderPresets() {
 
 // Render Phases & Tokens
 function renderPhases() {
+  // ENFORCE STRICT ORDER: Positive phases always above Negative phases
+  const posPhases = state.phases.filter(p => !p.isNegative);
+  const negPhases = state.phases.filter(p => p.isNegative);
+  state.phases = [...posPhases, ...negPhases];
+
   const container = document.getElementById("phases-container");
   container.innerHTML = "";
   
@@ -911,8 +916,8 @@ function renderPhases() {
   
   state.phases.forEach((phase, phaseIndex) => {
     const cMap = COLOR_CLASSES[phase.color] || COLOR_CLASSES.purple;
-    const isFirst = phaseIndex === 0;
-    const isLast = phaseIndex === state.phases.length - 1;
+    const isFirst = phaseIndex === 0 || (phase.isNegative && phaseIndex > 0 && !state.phases[phaseIndex - 1].isNegative);
+    const isLast = phaseIndex === state.phases.length - 1 || (!phase.isNegative && phaseIndex + 1 < state.phases.length && state.phases[phaseIndex + 1].isNegative);
     
     const phaseEl = document.createElement("div");
     phaseEl.className = `glass-panel rounded-xl overflow-hidden border ${cMap.border} ${phase.isActive ? '' : 'opacity-60'} transition-all duration-300`;
@@ -1762,6 +1767,13 @@ function loadConcept(conceptId) {
     });
   });
 
+  // Restore the exact original phase order when saved, fallback to current behavior if old concept
+  allPhases.sort((a, b) => {
+    const idxA = a._originalIndex !== undefined ? a._originalIndex : Number.MAX_SAFE_INTEGER;
+    const idxB = b._originalIndex !== undefined ? b._originalIndex : Number.MAX_SAFE_INTEGER;
+    return idxA - idxB;
+  });
+
   state.phases = JSON.parse(JSON.stringify(allPhases));
   showToast(`Loaded concept "${concept.name}" (${Object.keys(concept.layers).join(", ")})`, "success");
   renderApp();
@@ -1944,13 +1956,17 @@ function saveConceptFromModal() {
 
   // Build layers map from select values
   const layersMap = {};
+  let phaseIndexCounter = 0;
   document.querySelectorAll(".layer-select").forEach(sel => {
     const phaseId = sel.getAttribute("data-phase-id");
     const layerName = sel.value;
     const phase = state.phases.find(p => p.id === phaseId);
     if (!phase) return;
     if (!layersMap[layerName]) layersMap[layerName] = [];
-    layersMap[layerName].push(JSON.parse(JSON.stringify(phase)));
+    
+    let phaseCopy = JSON.parse(JSON.stringify(phase));
+    phaseCopy._originalIndex = phaseIndexCounter++;
+    layersMap[layerName].push(phaseCopy);
   });
 
   if (Object.keys(layersMap).length === 0) {
@@ -2043,10 +2059,73 @@ document.addEventListener("DOMContentLoaded", () => {
 const LS_GEMINI_API_KEY = "diffu_gemini_api_key";
 let lastSemanticResult = null;
 
+// Preferred model order for generateContent
+const GEMINI_MODEL_PRIORITY = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite"
+];
+
+/**
+ * Fetch the list of available Gemini models from the v1beta API.
+ * Returns an array of model name strings (e.g. ["models/gemini-2.5-flash", ...]).
+ */
+async function fetchGeminiModelList(apiKey) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error?.message || `Model list fetch failed: HTTP ${response.status}`);
+  }
+  const data = await response.json();
+  console.log("[DiffuPrompt] Gemini model list response:", data);
+  // data.models is an array of { name, displayName, ... }
+  return (data.models || []).map(m => m.name); // e.g. ["models/gemini-2.5-flash", ...]
+}
+
+/**
+ * Choose the best available model from GEMINI_MODEL_PRIORITY.
+ * Returns the bare model ID (e.g. "gemini-2.5-flash").
+ */
+async function chooseBestGeminiModel(apiKey) {
+  let available;
+  try {
+    available = await fetchGeminiModelList(apiKey);
+  } catch (e) {
+    console.warn("[DiffuPrompt] Could not fetch model list, falling back to gemini-2.5-flash-lite:", e.message);
+    return "gemini-2.5-flash-lite";
+  }
+
+  for (const candidate of GEMINI_MODEL_PRIORITY) {
+    // API returns "models/gemini-2.5-flash" style names
+    const found = available.some(name => name === `models/${candidate}` || name === candidate);
+    if (found) {
+      console.log(`[DiffuPrompt] Selected Gemini model: ${candidate}`);
+      return candidate;
+    }
+  }
+
+  // Last resort — try the first listed model that supports generateContent
+  console.warn("[DiffuPrompt] No priority model available. Falling back to gemini-2.5-flash-lite.");
+  return "gemini-2.5-flash-lite";
+}
+
+/**
+ * Validate that the API key is non-empty.
+ * Returns true if the key is a non-empty string.
+ */
+function validateGeminiApiKeyFormat(key) {
+  return typeof key === "string" && key.trim().length > 0;
+}
+
 async function fetchGeminiSemanticAnalysis(localResult) {
   const apiKey = localStorage.getItem(LS_GEMINI_API_KEY) || "";
   if (!apiKey) {
     throw new Error("Gemini API Key is not set.");
+  }
+
+  // --- API key presence check ---
+  if (!apiKey.trim()) {
+    throw new Error("APIキーを入力してください");
   }
 
   const posText = localResult.posTokens.map(t => `${t.text} (${t.weight})`).join(", ");
@@ -2088,7 +2167,12 @@ Definitions:
 Positive Prompt: [ ${posText} ]
 Negative Prompt: [ ${negText} ]`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // --- Requirement 1 & 2: list models, then pick best available ---
+  const modelId = await chooseBestGeminiModel(apiKey);
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+  console.log(`[DiffuPrompt] Calling generateContent with model: ${modelId}`);
+
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -2098,14 +2182,26 @@ Negative Prompt: [ ${negText} ]`;
     })
   });
 
+  // --- Requirement 5: log full API response ---
+  const rawText = await response.text();
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch (_) {
+    data = rawText;
+  }
+  console.log(`[DiffuPrompt] Gemini API full response (model: ${modelId}):`, data);
+
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.message || "Gemini API Error");
+    const errMsg = (typeof data === "object" && data?.error?.message) ? data.error.message : `HTTP ${response.status}`;
+    throw new Error(errMsg);
   }
 
-  const data = await response.json();
   const jsonText = data.candidates[0].content.parts[0].text;
-  return JSON.parse(jsonText);
+  const result = JSON.parse(jsonText);
+  // Attach the model that was actually used so the UI can display it
+  result._usedModel = modelId;
+  return result;
 }
 
 // ============================================================
@@ -2611,6 +2707,25 @@ function applyAssessmentCard(id, assessment) {
 }
 
 // ---- Wire up collapsible token detail ----
+
+/**
+ * Update the analysis source badge in the UI.
+ * @param {'local'|'gemini'} source
+ * @param {string} [modelName] - optional model name when source is 'gemini'
+ */
+function setAnalysisSourceBadge(source, modelName) {
+  const badge = document.getElementById('da-analysis-source-badge');
+  if (!badge) return;
+  if (source === 'gemini') {
+    const label = modelName ? modelName : 'Gemini API';
+    badge.textContent = `\u2728 Gemini Analysis (${label})`;
+    badge.className = 'da-source-badge da-source-gemini';
+  } else {
+    badge.textContent = '\uD83D\uDCBB Local Analysis';
+    badge.className = 'da-source-badge da-source-local';
+  }
+}
+
 function initAnalysisPanel() {
   // Restore saved Gemini API key
   const savedKey = localStorage.getItem(LS_GEMINI_API_KEY) || "";
@@ -2661,12 +2776,17 @@ function initAnalysisPanel() {
       const localResult = runSemanticAnalysis();
       if (localResult.totalTokens === 0) {
         renderAnalysisPanel(localResult);
+        setAnalysisSourceBadge('local');
         return;
       }
 
       const apiKey = localStorage.getItem(LS_GEMINI_API_KEY) || "";
       if (!apiKey) {
-        alert("Gemini API Key が設定されていません。入力してSaveしてください。");
+        // No API key: fall back to local analysis silently
+        lastSemanticResult = localResult;
+        renderAnalysisPanel(localResult);
+        setAnalysisSourceBadge('local');
+        showToast('Gemini API Key が未設定のためローカル解析を実行しました。', 'warning');
         return;
       }
 
@@ -2687,10 +2807,16 @@ function initAnalysisPanel() {
         lastSemanticResult = geminiResult;
         
         renderAnalysisPanel(lastSemanticResult);
-        showToast('Gemini API による解析が完了しました。', 'success');
+        // --- Requirement 7: show which engine was used ---
+        setAnalysisSourceBadge('gemini', geminiResult._usedModel);
+        showToast(`Gemini (${geminiResult._usedModel || 'API'}) による解析が完了しました。`, 'success');
       } catch (err) {
         console.error(err);
-        alert("Gemini API Error: " + err.message);
+        // Fallback to local analysis on Gemini error
+        lastSemanticResult = localResult;
+        renderAnalysisPanel(localResult);
+        setAnalysisSourceBadge('local');
+        showToast(`Gemini API Error: ${err.message} → ローカル解析で代替実行しました。`, 'error');
       } finally {
         icon.className = originalIconClass;
         text.textContent = "Re-Analyze";
@@ -2711,6 +2837,7 @@ function initAnalysisPanel() {
 
   // Initial render with local heuristic
   renderAnalysisPanel();
+  setAnalysisSourceBadge('local');
 }
 
 // ---- Hook into existing updateOutput ----
