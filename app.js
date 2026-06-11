@@ -1460,6 +1460,11 @@ async function generateImage() {
   const seedRaw      = parseInt(document.getElementById("input-seed").value, 10);
   const seed         = isNaN(seedRaw) || seedRaw <= 0 ? 0 : seedRaw;
 
+  // Retrieve sampling steps, CFG scale, and sampler values
+  const steps        = parseInt(document.getElementById("input-sampling-steps").value, 10);
+  const cfgScale     = parseFloat(document.getElementById("input-cfg-scale").value);
+  const sampler      = document.getElementById("select-sampler").value;
+
   _generatedImageFormat = outputFormat;
 
   // Show loading state
@@ -1474,6 +1479,9 @@ async function generateImage() {
     if (prompts.neg.trim()) {
       formData.append("negative_prompt", prompts.neg);
     }
+    formData.append("steps",         String(steps));
+    formData.append("cfg_scale",     String(cfgScale));
+    formData.append("sampler",       sampler);
 
     setApiLoading(true, "Waiting for generation (this may take ~10–30s)…");
 
@@ -2117,7 +2125,7 @@ function validateGeminiApiKeyFormat(key) {
   return typeof key === "string" && key.trim().length > 0;
 }
 
-async function fetchGeminiSemanticAnalysis(localResult) {
+async function fetchGeminiSemanticAnalysis(localResult, steps) {
   const apiKey = localStorage.getItem(LS_GEMINI_API_KEY) || "";
   if (!apiKey) {
     throw new Error("Gemini API Key is not set.");
@@ -2146,7 +2154,7 @@ Respond ONLY in valid JSON format matching exactly this structure:
   "wtNeg": 2.5,
   "pctDiffusion": 60,
   "pctStructure": 40,
-  "causalExplanation": "Explain the causal relationship between positive and negative prompts, and detect risks of prompt collapse...",
+  "causalExplanation": "Explain the causal relationship between positive and negative prompts and Target Sampling Steps: ${steps}, and detect risks of prompt collapse...",
   "assessments": {
     "style": { "detected": true, "matchedKws": ["keyword"], "matchedReinf": ["keyword"], "matchedDanger": [], "stabilityScore": 85, "status": "stable" },
     "grisaille": { "detected": false, "matchedKws": [], "matchedReinf": [], "matchedDanger": [], "stabilityScore": 0, "status": "inactive" },
@@ -2165,7 +2173,8 @@ Definitions:
   - status must be one of: 'stable', 'warning', 'critical', 'inactive'.
   - stabilityScore from 0 to 100.
 Positive Prompt: [ ${posText} ]
-Negative Prompt: [ ${negText} ]`;
+Negative Prompt: [ ${negText} ]
+Target Sampling Steps: ${steps}`;
 
   // --- Requirement 1 & 2: list models, then pick best available ---
   const modelId = await chooseBestGeminiModel(apiKey);
@@ -2799,7 +2808,10 @@ function initAnalysisPanel() {
       reBtn.disabled = true;
 
       try {
-        const geminiResult = await fetchGeminiSemanticAnalysis(localResult);
+        const daStepsSlider = document.getElementById('da-input-steps');
+        const steps = daStepsSlider ? parseInt(daStepsSlider.value, 10) : 20;
+
+        const geminiResult = await fetchGeminiSemanticAnalysis(localResult, steps);
         // Merge geminiResult with basic token info from local
         geminiResult.posTokens = localResult.posTokens;
         geminiResult.negTokens = localResult.negTokens;
@@ -3042,8 +3054,8 @@ function renderParamRecommender(stepsOverride) {
   const steps   = stepsOverride !== undefined ? parseInt(stepsOverride, 10)
                                               : (stepsEl ? parseInt(stepsEl.value, 10) : 20);
 
-  // Run current semantic analysis to feed into the engine
-  const result = lastSemanticResult || runSemanticAnalysis();
+  // Run current semantic analysis to feed into the engine (always use local result for recommendation)
+  const result = runSemanticAnalysis();
 
   // If no tokens exist, show a minimal placeholder and bail
   const cfgEl      = document.getElementById('da-rec-cfg');
