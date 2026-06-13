@@ -9,10 +9,16 @@ let state = {
       isActive: true,
       isNegative: false,
       color: "purple", // purple, cyan, fuchsia, emerald, rose, blue
-      tokens: [
-        { id: "tok_1", text: "cyberpunk warrior cyborg girl", weight: 1.15, isActive: true },
-        { id: "tok_2", text: "futuristic sleek armor", weight: 1.0, isActive: true },
-        { id: "tok_3", text: "striking detailed neon eyes", weight: 1.25, isActive: true }
+      activePatternIndex: 0,
+      patterns: [
+        {
+          patternName: "Pattern 1",
+          tokens: [
+            { id: "tok_1", text: "cyberpunk warrior cyborg girl", weight: 1.15, isActive: true },
+            { id: "tok_2", text: "futuristic sleek armor", weight: 1.0, isActive: true },
+            { id: "tok_3", text: "striking detailed neon eyes", weight: 1.25, isActive: true }
+          ]
+        }
       ]
     },
     {
@@ -21,10 +27,16 @@ let state = {
       isActive: true,
       isNegative: false,
       color: "cyan",
-      tokens: [
-        { id: "tok_4", text: "digital painting", weight: 1.0, isActive: true },
-        { id: "tok_5", text: "highly detailed concept art", weight: 1.1, isActive: true },
-        { id: "tok_6", text: "sharp focus", weight: 1.0, isActive: true }
+      activePatternIndex: 0,
+      patterns: [
+        {
+          patternName: "Pattern 1",
+          tokens: [
+            { id: "tok_4", text: "digital painting", weight: 1.0, isActive: true },
+            { id: "tok_5", text: "highly detailed concept art", weight: 1.1, isActive: true },
+            { id: "tok_6", text: "sharp focus", weight: 1.0, isActive: true }
+          ]
+        }
       ]
     },
     {
@@ -33,10 +45,16 @@ let state = {
       isActive: true,
       isNegative: false,
       color: "emerald",
-      tokens: [
-        { id: "tok_7", text: "neon lit rain-slicked city streets", weight: 1.2, isActive: true },
-        { id: "tok_8", text: "volumetric atmospheric fog", weight: 0.9, isActive: true },
-        { id: "tok_9", text: "raytracing global illumination", weight: 1.05, isActive: true }
+      activePatternIndex: 0,
+      patterns: [
+        {
+          patternName: "Pattern 1",
+          tokens: [
+            { id: "tok_7", text: "neon lit rain-slicked city streets", weight: 1.2, isActive: true },
+            { id: "tok_8", text: "volumetric atmospheric fog", weight: 0.9, isActive: true },
+            { id: "tok_9", text: "raytracing global illumination", weight: 1.05, isActive: true }
+          ]
+        }
       ]
     },
     {
@@ -53,7 +71,8 @@ let state = {
       ]
     }
   ],
-  presets: []
+  presets: [],
+  activeConcept: null  // 現在選択中のコンセプトID（commit ボタンの有効化に使用）
 };
 
 // Default Built-in Presets
@@ -69,10 +88,16 @@ const DEFAULT_PRESETS = [
         isActive: true,
         isNegative: false,
         color: "purple",
-        tokens: [
-          { id: "p1", text: "close up portrait of an elderly man with deep wrinkles", weight: 1.2, isActive: true },
-          { id: "p2", text: "thoughtful expression", weight: 1.0, isActive: true },
-          { id: "p3", text: "weathered skin texture", weight: 1.15, isActive: true }
+        activePatternIndex: 0,
+        patterns: [
+          {
+            patternName: "Pattern 1",
+            tokens: [
+              { id: "p1", text: "close up portrait of an elderly man with deep wrinkles", weight: 1.2, isActive: true },
+              { id: "p2", text: "thoughtful expression", weight: 1.0, isActive: true },
+              { id: "p3", text: "weathered skin texture", weight: 1.15, isActive: true }
+            ]
+          }
         ]
       },
       {
@@ -81,11 +106,17 @@ const DEFAULT_PRESETS = [
         isActive: true,
         isNegative: false,
         color: "cyan",
-        tokens: [
-          { id: "p4", text: "shot on 85mm lens", weight: 1.0, isActive: true },
-          { id: "p5", text: "f/1.4 aperture", weight: 1.1, isActive: true },
-          { id: "p6", text: "dramatic side lighting", weight: 1.2, isActive: true },
-          { id: "p7", text: "photorealistic", weight: 1.0, isActive: true }
+        activePatternIndex: 0,
+        patterns: [
+          {
+            patternName: "Pattern 1",
+            tokens: [
+              { id: "p4", text: "shot on 85mm lens", weight: 1.0, isActive: true },
+              { id: "p5", text: "f/1.4 aperture", weight: 1.1, isActive: true },
+              { id: "p6", text: "dramatic side lighting", weight: 1.2, isActive: true },
+              { id: "p7", text: "photorealistic", weight: 1.0, isActive: true }
+            ]
+          }
         ]
       },
       {
@@ -114,10 +145,16 @@ const DEFAULT_PRESETS = [
         isActive: true,
         isNegative: false,
         color: "fuchsia",
-        tokens: [
-          { id: "a1", text: "anime girl with pastel pink hair", weight: 1.1, isActive: true },
-          { id: "a2", text: "oversized hoodie", weight: 1.0, isActive: true },
-          { id: "a3", text: "headphones", weight: 1.0, isActive: true }
+        activePatternIndex: 0,
+        patterns: [
+          {
+            patternName: "Pattern 1",
+            tokens: [
+              { id: "a1", text: "anime girl with pastel pink hair", weight: 1.1, isActive: true },
+              { id: "a2", text: "oversized hoodie", weight: 1.0, isActive: true },
+              { id: "a3", text: "headphones", weight: 1.0, isActive: true }
+            ]
+          }
         ]
       },
       {
@@ -126,11 +163,17 @@ const DEFAULT_PRESETS = [
         isActive: true,
         isNegative: false,
         color: "cyan",
-        tokens: [
-          { id: "a4", text: "makoto shinkai style", weight: 1.25, isActive: true },
-          { id: "a5", text: "vibrant colors", weight: 1.1, isActive: true },
-          { id: "a6", text: "shibuya backdrop at night", weight: 1.05, isActive: true },
-          { id: "a7", text: "starry sky", weight: 1.0, isActive: true }
+        activePatternIndex: 0,
+        patterns: [
+          {
+            patternName: "Pattern 1",
+            tokens: [
+              { id: "a4", text: "makoto shinkai style", weight: 1.25, isActive: true },
+              { id: "a5", text: "vibrant colors", weight: 1.1, isActive: true },
+              { id: "a6", text: "shibuya backdrop at night", weight: 1.05, isActive: true },
+              { id: "a7", text: "starry sky", weight: 1.0, isActive: true }
+            ]
+          }
         ]
       },
       {
@@ -158,10 +201,16 @@ const DEFAULT_PRESETS = [
         isActive: true,
         isNegative: false,
         color: "emerald",
-        tokens: [
-          { id: "f1", text: "majestic medieval castle built into a cliffside", weight: 1.25, isActive: true },
-          { id: "f2", text: "cascading waterfalls below", weight: 1.1, isActive: true },
-          { id: "f3", text: "ancient stone bridge", weight: 1.0, isActive: true }
+        activePatternIndex: 0,
+        patterns: [
+          {
+            patternName: "Pattern 1",
+            tokens: [
+              { id: "f1", text: "majestic medieval castle built into a cliffside", weight: 1.25, isActive: true },
+              { id: "f2", text: "cascading waterfalls below", weight: 1.1, isActive: true },
+              { id: "f3", text: "ancient stone bridge", weight: 1.0, isActive: true }
+            ]
+          }
         ]
       },
       {
@@ -170,11 +219,17 @@ const DEFAULT_PRESETS = [
         isActive: true,
         isNegative: false,
         color: "purple",
-        tokens: [
-          { id: "f4", text: "golden hour light", weight: 1.2, isActive: true },
-          { id: "f5", text: "misty valley", weight: 1.1, isActive: true },
-          { id: "f6", text: "fantasy concept art", weight: 1.0, isActive: true },
-          { id: "f7", text: "trending on artstation", weight: 1.05, isActive: true }
+        activePatternIndex: 0,
+        patterns: [
+          {
+            patternName: "Pattern 1",
+            tokens: [
+              { id: "f4", text: "golden hour light", weight: 1.2, isActive: true },
+              { id: "f5", text: "misty valley", weight: 1.1, isActive: true },
+              { id: "f6", text: "fantasy concept art", weight: 1.0, isActive: true },
+              { id: "f7", text: "trending on artstation", weight: 1.05, isActive: true }
+            ]
+          }
         ]
       },
       {
@@ -318,7 +373,8 @@ function computeTokenConflicts() {
   // 1. Collect all active core tokens from positive phases
   state.phases.forEach(phase => {
     if (!phase.isActive || phase.isNegative) return;
-    phase.tokens.forEach(tok => {
+    const tokens = getPhaseTokens(phase);
+    tokens.forEach(tok => {
       if (tok.isActive && tok.isCore) {
         coreTokens.push(tok.text.toLowerCase());
       }
@@ -342,7 +398,8 @@ function computeTokenConflicts() {
   // 3. Scan all tokens for conflicts based on active rules
   state.phases.forEach(phase => {
     if (!phase.isActive) return;
-    phase.tokens.forEach(tok => {
+    const tokens = getPhaseTokens(phase);
+    tokens.forEach(tok => {
       if (!tok.isActive) return;
       
       const tokText = tok.text.toLowerCase();
@@ -378,12 +435,138 @@ function computeTokenConflicts() {
   return conflictMap;
 }
 
+function ensurePhaseStructure(phase) {
+  if (phase.isNegative) {
+    if (!phase.tokens) phase.tokens = [];
+  } else {
+    if (!phase.patterns || phase.patterns.length === 0) {
+      phase.patterns = [
+        {
+          patternName: "Pattern 1",
+          tokens: phase.tokens || []
+        }
+      ];
+      delete phase.tokens;
+    }
+    if (phase.activePatternIndex === undefined || phase.activePatternIndex === null) {
+      phase.activePatternIndex = 0;
+    }
+  }
+  return phase;
+}
+
+function getPhaseTokens(phase) {
+  if (phase.isNegative) {
+    return phase.tokens || [];
+  } else {
+    if (!phase.patterns || phase.patterns.length === 0) {
+      ensurePhaseStructure(phase);
+    }
+    if (phase.activePatternIndex >= phase.patterns.length) {
+      phase.activePatternIndex = phase.patterns.length - 1;
+    }
+    if (phase.activePatternIndex < 0) {
+      phase.activePatternIndex = 0;
+    }
+    const currentPattern = phase.patterns[phase.activePatternIndex];
+    if (!currentPattern) {
+      phase.patterns[phase.activePatternIndex] = {
+        patternName: `Pattern ${phase.activePatternIndex + 1}`,
+        tokens: []
+      };
+    }
+    return phase.patterns[phase.activePatternIndex].tokens;
+  }
+}
+
 // Initialize Application
 document.addEventListener("DOMContentLoaded", () => {
   loadLocalStorage();
+  state.phases.forEach(ensurePhaseStructure);
   renderApp();
   setupGlobalEvents();
+  initTabControl();
 });
+
+// ============================================================
+// Tab Control — Bottom Navigation Bar
+// Manages page visibility and active button styling.
+// Safe to call even if index.html inline script already ran
+// (guarded by window.__tabControlInitialized flag).
+// ============================================================
+function initTabControl() {
+  // Guard: if the inline <script> in index.html already set up listeners, skip.
+  if (window.__tabControlInitialized) return;
+  window.__tabControlInitialized = true;
+
+  const PAGE_IDS = ['workspace', 'library', 'compile', 'generate', 'analysis'];
+
+  const ACTIVE_COLORS = {
+    library:   'text-purple-400',
+    workspace: 'text-cyan-400',
+    compile:   'text-cyan-400',
+    generate:  'text-amber-400',
+    analysis:  'text-indigo-400',
+  };
+
+  // 1. Initial state: show only page-workspace, hide all others.
+  PAGE_IDS.forEach(function (pageId) {
+    const el = document.getElementById('page-' + pageId);
+    if (!el) return;
+    if (pageId === 'workspace') {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  });
+
+  // 2. Tab switch function.
+  function switchTab(tab) {
+    // Hide all pages.
+    PAGE_IDS.forEach(function (pageId) {
+      const el = document.getElementById('page-' + pageId);
+      if (el) el.classList.add('hidden');
+    });
+    // Show the target page.
+    const target = document.getElementById('page-' + tab);
+    if (target) target.classList.remove('hidden');
+
+    // Update button active/default colours.
+    document.querySelectorAll('.nav-tab-btn').forEach(function (btn) {
+      const btnTab = btn.getAttribute('data-tab');
+      const icon   = btn.querySelector('i');
+      const span   = btn.querySelector('span');
+
+      // Reset to default colour.
+      btn.classList.remove(
+        'text-cyan-400', 'text-purple-400', 'text-amber-400', 'text-indigo-400',
+        'bg-slate-800/60'
+      );
+      btn.classList.add('text-slate-400');
+      if (icon)  { icon.classList.remove( 'text-cyan-400', 'text-purple-400', 'text-amber-400', 'text-indigo-400'); icon.classList.add('text-slate-400'); }
+      if (span)  { span.classList.remove('text-cyan-400', 'text-purple-400', 'text-amber-400', 'text-indigo-400'); span.classList.add('text-slate-400'); }
+
+      if (btnTab === tab) {
+        // Apply active colour.
+        const activeColor = ACTIVE_COLORS[tab] || 'text-cyan-400';
+        btn.classList.remove('text-slate-400');
+        btn.classList.add(activeColor, 'bg-slate-800/60');
+        if (icon)  { icon.classList.remove('text-slate-400');  icon.classList.add(activeColor); }
+        if (span)  { span.classList.remove('text-slate-400');  span.classList.add(activeColor); }
+      }
+    });
+  }
+
+  // 3. Attach click listeners to all nav buttons.
+  document.querySelectorAll('.nav-tab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      switchTab(btn.getAttribute('data-tab'));
+    });
+  });
+
+  // 4. Set initial active tab to workspace.
+  switchTab('workspace');
+}
 
 // Load Local Storage presets
 function loadLocalStorage() {
@@ -416,14 +599,16 @@ function setupGlobalEvents() {
     // Choose next color sequentially
     const color = PHASE_COLORS[state.phases.length % PHASE_COLORS.length];
     
-    state.phases.push({
+    const newPhase = {
       id: "phase_" + Date.now(),
       name: name,
       isActive: true,
       isNegative: isNegative,
       color: color,
-      tokens: []
-    });
+      tokens: [] // ensurePhaseStructure will migrate this to patterns[] for positive phases
+    };
+    ensurePhaseStructure(newPhase);
+    state.phases.push(newPhase);
     
     input.value = "";
     document.getElementById("checkbox-new-phase-neg").checked = false;
@@ -449,14 +634,16 @@ function setupGlobalEvents() {
     
     let tokenCount = 0;
     parsedPhases.forEach((phase, index) => {
-      state.phases.push({
+      const importedPhase = {
         id: "phase_imported_" + Date.now() + "_" + index,
         name: phase.name,
         isActive: true,
         isNegative: phase.isNegative,
         color: phase.isNegative ? "rose" : "purple",
-        tokens: phase.tokens
-      });
+        tokens: phase.tokens // ensurePhaseStructure migrates to patterns[] if positive
+      };
+      ensurePhaseStructure(importedPhase);
+      state.phases.push(importedPhase);
       tokenCount += phase.tokens.length;
     });
     
@@ -565,10 +752,16 @@ function setupGlobalEvents() {
           isActive: true,
           isNegative: false,
           color: "purple",
-          tokens: [
-            { id: "tok_1", text: "cyberpunk warrior cyborg girl", weight: 1.15, isActive: true },
-            { id: "tok_2", text: "futuristic sleek armor", weight: 1.0, isActive: true },
-            { id: "tok_3", text: "striking detailed neon eyes", weight: 1.25, isActive: true }
+          activePatternIndex: 0,
+          patterns: [
+            {
+              patternName: "Pattern 1",
+              tokens: [
+                { id: "tok_1", text: "cyberpunk warrior cyborg girl", weight: 1.15, isActive: true, isCore: false },
+                { id: "tok_2", text: "futuristic sleek armor", weight: 1.0, isActive: true, isCore: false },
+                { id: "tok_3", text: "striking detailed neon eyes", weight: 1.25, isActive: true, isCore: false }
+              ]
+            }
           ]
         },
         {
@@ -577,9 +770,15 @@ function setupGlobalEvents() {
           isActive: true,
           isNegative: false,
           color: "cyan",
-          tokens: [
-            { id: "tok_4", text: "digital painting", weight: 1.0, isActive: true },
-            { id: "tok_5", text: "highly detailed concept art", weight: 1.1, isActive: true }
+          activePatternIndex: 0,
+          patterns: [
+            {
+              patternName: "Pattern 1",
+              tokens: [
+                { id: "tok_4", text: "digital painting", weight: 1.0, isActive: true, isCore: false },
+                { id: "tok_5", text: "highly detailed concept art", weight: 1.1, isActive: true, isCore: false }
+              ]
+            }
           ]
         },
         {
@@ -754,7 +953,8 @@ function compilePrompts() {
     if (!phase.isActive) return;
     
     let phaseStrings = [];
-    phase.tokens.forEach(tok => {
+    const tokens = getPhaseTokens(phase);
+    tokens.forEach(tok => {
       if (!tok.isActive) return;
       
       let weight = parseFloat(tok.weight);
@@ -880,6 +1080,98 @@ function renderPresets() {
   });
 }
 
+let animatingPhases = {};
+
+window.switchPattern = function(phaseId, dir) {
+  const phase = state.phases.find(p => p.id === phaseId);
+  if (!phase || phase.isNegative) return;
+  const newIndex = phase.activePatternIndex + dir;
+  if (newIndex >= 0 && newIndex < phase.patterns.length) {
+    const phaseEl = document.querySelector(`[data-phase-id="${phaseId}"]`);
+    const tokenArea = phaseEl ? phaseEl.querySelector('.token-area-3d') : null;
+    if (tokenArea) {
+      // 1. Outward 3D flip effect
+      tokenArea.style.transition = 'transform 0.18s ease-in, opacity 0.18s ease-in';
+      tokenArea.style.transform = 'perspective(1000px) rotateY(-90deg)';
+      tokenArea.style.opacity = '0';
+      
+      setTimeout(() => {
+        // 2. Update status and render with flip-enter
+        phase.activePatternIndex = newIndex;
+        animatingPhases[phaseId] = true;
+        renderApp();
+      }, 180);
+    } else {
+      phase.activePatternIndex = newIndex;
+      renderApp();
+    }
+  }
+};
+
+window.addPattern = function(phaseId) {
+  const phase = state.phases.find(p => p.id === phaseId);
+  if (!phase || phase.isNegative) return;
+  if (phase.patterns.length >= 10) {
+    showToast("パターン数は最大10個までです。", "warning");
+    return;
+  }
+  const nextNum = phase.patterns.length + 1;
+  phase.patterns.push({
+    patternName: `Pattern ${nextNum}`,
+    tokens: []
+  });
+  phase.activePatternIndex = phase.patterns.length - 1;
+  animatingPhases[phaseId] = true;
+  showToast(`Pattern ${nextNum} created!`);
+  renderApp();
+};
+
+window.startEditPhaseTitle = function(phaseId) {
+  const phase = state.phases.find(p => p.id === phaseId);
+  if (!phase) return;
+  
+  const container = document.getElementById(`phase-title-container-${phaseId}`);
+  if (!container) return;
+  
+  container.innerHTML = `
+    <input type="text" 
+           id="edit-phase-title-input-${phaseId}" 
+           value="${phase.name}" 
+           class="bg-slate-950/80 border border-slate-700 rounded px-2.5 py-0.5 text-sm font-bold text-slate-100 focus:outline-none focus:border-purple-500 w-48"
+           onkeydown="handleEditPhaseTitleKeydown(event, '${phaseId}')"
+           onblur="savePhaseTitle('${phaseId}')"
+    >
+  `;
+  
+  const input = document.getElementById(`edit-phase-title-input-${phaseId}`);
+  if (input) {
+    input.focus();
+    input.select();
+  }
+};
+
+window.handleEditPhaseTitleKeydown = function(e, phaseId) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    savePhaseTitle(phaseId);
+  } else if (e.key === "Escape") {
+    renderApp();
+  }
+};
+
+window.savePhaseTitle = function(phaseId) {
+  const input = document.getElementById(`edit-phase-title-input-${phaseId}`);
+  if (!input) return;
+  
+  const newName = input.value.trim();
+  const phase = state.phases.find(p => p.id === phaseId);
+  if (phase && newName) {
+    phase.name = newName;
+    showToast(`Phase renamed to "${newName}"`);
+  }
+  renderApp();
+};
+
 // Render Phases & Tokens
 function renderPhases() {
   // ENFORCE STRICT ORDER: Positive phases always above Negative phases
@@ -925,10 +1217,11 @@ function renderPhases() {
     
     // Compile token badges list
     let tokensHtml = "";
-    if (phase.tokens.length === 0) {
+    const tokens = getPhaseTokens(phase);
+    if (tokens.length === 0) {
       tokensHtml = `<p class="text-slate-500 text-xs py-4 text-center select-none">No tokens inside this phase yet. Type above and press Enter!</p>`;
     } else {
-      tokensHtml = phase.tokens.map((tok, tokIndex) => {
+      tokensHtml = tokens.map((tok, tokIndex) => {
         // Calculate weight glow strength & border accent
         let bgStyle = "";
         let borderStyle = "border-slate-800";
@@ -979,7 +1272,7 @@ function renderPhases() {
         }
         
         const isTokFirst = tokIndex === 0;
-        const isTokLast = tokIndex === phase.tokens.length - 1;
+        const isTokLast = tokIndex === tokens.length - 1;
 
         // Conflict badge
         let conflictBadgeHtml = '';
@@ -1080,6 +1373,35 @@ function renderPhases() {
         `;
       }).join("");
     }
+
+    let patternSelectorHtml = "";
+    if (!phase.isNegative) {
+      if (!phase.patterns) {
+        ensurePhaseStructure(phase);
+      }
+      patternSelectorHtml = `
+        <!-- Pattern Selector Bar -->
+        <div class="flex items-center justify-between px-4 py-2 bg-slate-900/30 border-b border-slate-800/60 text-xs">
+          <div class="flex items-center gap-2">
+            <button onclick="switchPattern('${phase.id}', -1)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 hover:text-slate-100 rounded text-slate-400 disabled:opacity-40 disabled:hover:bg-slate-800 disabled:hover:text-slate-400 transition" ${phase.activePatternIndex === 0 ? 'disabled' : ''}>
+              ◀
+            </button>
+            <span class="font-bold text-slate-300">Pattern ${phase.activePatternIndex + 1} / ${phase.patterns.length}</span>
+            <button onclick="switchPattern('${phase.id}', 1)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 hover:text-slate-100 rounded text-slate-400 disabled:opacity-40 disabled:hover:bg-slate-800 disabled:hover:text-slate-400 transition" ${phase.activePatternIndex === phase.patterns.length - 1 ? 'disabled' : ''}>
+              ▶
+            </button>
+          </div>
+          <button onclick="addPattern('${phase.id}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 hover:text-purple-200 transition rounded font-semibold flex items-center gap-1.5" ${phase.patterns.length >= 10 ? 'disabled' : ''}>
+            <i class="fa-solid fa-plus text-[10px]"></i> Add Pattern (Max 10)
+          </button>
+        </div>
+      `;
+    }
+
+    const isAnimating = animatingPhases[phase.id];
+    if (isAnimating) {
+      delete animatingPhases[phase.id];
+    }
     
     phaseEl.innerHTML = `
       <!-- Phase Header -->
@@ -1094,7 +1416,12 @@ function renderPhases() {
           >
           
           <!-- Phase Title -->
-          <span class="text-base font-bold text-slate-100">${phase.name}</span>
+          <div class="flex items-center gap-1.5" id="phase-title-container-${phase.id}">
+            <span class="text-base font-bold text-slate-100">${phase.name}</span>
+            <button onclick="startEditPhaseTitle('${phase.id}')" class="text-slate-400 hover:text-slate-200 transition" title="Rename Phase">
+              <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+            </button>
+          </div>
           
           <!-- Positive / Negative Tag badge -->
           <button onclick="togglePhaseType('${phase.id}')" 
@@ -1146,8 +1473,10 @@ function renderPhases() {
         </div>
       </div>
       
+      ${patternSelectorHtml}
+      
       <!-- Phase Content / Token list -->
-      <div class="p-4 bg-slate-900/10">
+      <div class="p-4 bg-slate-900/10 token-area-3d ${isAnimating ? 'flip-enter' : ''}">
         <!-- Add Token box -->
         <div class="flex items-center gap-2 mb-4 bg-slate-900/40 border border-slate-800/80 rounded-lg p-1.5 ${cMap.borderFocus} transition duration-200">
           <input type="text" 
@@ -1192,8 +1521,9 @@ window.handleAddTokenButton = function(phaseId) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase) return;
   
+  const tokens = getPhaseTokens(phase);
   newTokensText.forEach(text => {
-    phase.tokens.push({
+    tokens.push({
       id: "tok_" + Math.random().toString(36).substr(2, 9),
       text: text,
       weight: 1.0,
@@ -1270,7 +1600,8 @@ window.toggleTokenActive = function(phaseId, tokenId) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase) return;
   
-  const token = phase.tokens.find(t => t.id === tokenId);
+  const tokens = getPhaseTokens(phase);
+  const token = tokens.find(t => t.id === tokenId);
   if (token) {
     token.isActive = !token.isActive;
     renderApp();
@@ -1281,7 +1612,8 @@ window.updateTokenWeight = function(phaseId, tokenId, newWeight) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase) return;
   
-  const token = phase.tokens.find(t => t.id === tokenId);
+  const tokens = getPhaseTokens(phase);
+  const token = tokens.find(t => t.id === tokenId);
   if (token) {
     token.weight = parseFloat(newWeight);
     updateOutput();
@@ -1299,7 +1631,8 @@ window.resetTokenWeight = function(phaseId, tokenId) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase) return;
   
-  const token = phase.tokens.find(t => t.id === tokenId);
+  const tokens = getPhaseTokens(phase);
+  const token = tokens.find(t => t.id === tokenId);
   if (token) {
     token.weight = 1.0;
     renderApp();
@@ -1310,9 +1643,10 @@ window.deleteToken = function(phaseId, tokenId) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase) return;
   
-  const index = phase.tokens.findIndex(t => t.id === tokenId);
+  const tokens = getPhaseTokens(phase);
+  const index = tokens.findIndex(t => t.id === tokenId);
   if (index !== -1) {
-    phase.tokens.splice(index, 1);
+    tokens.splice(index, 1);
     renderApp();
   }
 };
@@ -1322,7 +1656,8 @@ window.toggleTokenCore = function(phaseId, tokenId) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase || phase.isNegative) return;
 
-  const token = phase.tokens.find(t => t.id === tokenId);
+  const tokens = getPhaseTokens(phase);
+  const token = tokens.find(t => t.id === tokenId);
   if (!token) return;
 
   token.isCore = !token.isCore;
@@ -1335,16 +1670,17 @@ window.reorderToken = function(phaseId, tokenId, direction) {
   const phase = state.phases.find(p => p.id === phaseId);
   if (!phase) return;
   
-  const index = phase.tokens.findIndex(t => t.id === tokenId);
+  const tokens = getPhaseTokens(phase);
+  const index = tokens.findIndex(t => t.id === tokenId);
   if (index === -1) return;
   
   const targetIndex = index + direction;
-  if (targetIndex < 0 || targetIndex >= phase.tokens.length) return;
+  if (targetIndex < 0 || targetIndex >= tokens.length) return;
   
   // Swap elements
-  const temp = phase.tokens[index];
-  phase.tokens[index] = phase.tokens[targetIndex];
-  phase.tokens[targetIndex] = temp;
+  const temp = tokens[index];
+  tokens[index] = tokens[targetIndex];
+  tokens[targetIndex] = temp;
   
   renderApp();
 };
@@ -1647,6 +1983,7 @@ function saveConceptsToStorage() {
 function renderConceptLibrary() {
   renderConceptCategoryTabs();
   renderConceptCards();
+  renderConceptArchive();
 }
 
 // Collect all unique categories from saved concepts
@@ -1729,23 +2066,93 @@ function renderConceptCards() {
       ? `<span class="concept-category-chip">${concept.category}</span>`
       : "";
 
-    const phaseCount = layerNames.reduce((acc, ln) => acc + (concept.layers[ln]?.length || 0), 0);
+    // Calculate commit count (initial value is 1 minimum for display)
+    const commitCount = Math.max(1, (concept.commits || []).length);
+
+    // Calculate positive and negative phases
+    let posCount = 0;
+    let negCount = 0;
+    Object.values(concept.layers || {}).forEach(phases => {
+      (phases || []).forEach(phase => {
+        if (phase.isNegative) negCount++;
+        else posCount++;
+      });
+    });
+
+    // Generate tree HTML
+    let treeHtml = "";
+    Object.entries(concept.layers || {}).forEach(([layerName, phases]) => {
+      if (phases && phases.length > 0) {
+        treeHtml += `<div class="font-bold text-slate-400 mt-1 uppercase text-[9px] tracking-wider">${layerName}</div>`;
+        phases.forEach(p => {
+          const typeSymbol = p.isNegative ? "[-]" : "[+]";
+          treeHtml += `<div class="pl-2 text-[9px] text-slate-500">${typeSymbol} ${p.name}</div>`;
+        });
+      }
+    });
+
+    // Is this the active concept?
+    const isActive = state.activeConcept === concept.id;
 
     card.innerHTML = `
       <button class="concept-card-delete" data-delete-id="${concept.id}" title="Delete Concept">
         <i class="fa-solid fa-trash-can text-[10px]"></i>
       </button>
-      <div class="concept-card-name">${concept.name}</div>
-      <div class="concept-card-meta">
+
+      <!-- Title row: name + pen edit button -->
+      <div class="flex items-center gap-2 pr-6 mb-1.5 select-none" onclick="event.stopPropagation()">
+        <div class="concept-card-name flex-grow" id="concept-title-${concept.id}">${concept.name}</div>
+        <button onclick="startEditConceptTitle('${concept.id}', event)"
+                class="text-slate-600 hover:text-slate-300 transition shrink-0 p-1"
+                title="Rename Concept">
+          <i class="fa-solid fa-pen text-[9px]"></i>
+        </button>
+      </div>
+
+      <!-- Category + layer badges -->
+      <div class="concept-card-meta mb-3">
         ${categoryHtml}
         ${badgesHtml}
-        <span class="ml-auto text-[9px] text-slate-600 font-mono">${phaseCount} phase${phaseCount !== 1 ? 's' : ''}</span>
+      </div>
+
+      <!-- Action row: commit | tree | export  +  pos/neg counts right-aligned -->
+      <div class="concept-card-actions">
+        <div class="concept-card-action-links">
+          <button onclick="event.stopPropagation(); loadConcept('${concept.id}')"
+                  class="concept-action-link ${isActive ? 'concept-action-link--active' : ''}"
+                  title="${commitCount} commits — click to activate this concept">
+            ${commitCount} commit${commitCount !== 1 ? 's' : ''}
+          </button>
+          <button onclick="toggleConceptTree('${concept.id}', event)"
+                  class="concept-action-link"
+                  title="Show/Hide Time-Line Tree">
+            tree
+          </button>
+          <button onclick="exportSingleConcept('${concept.id}', event)"
+                  class="concept-action-link"
+                  title="Export this concept">
+            export
+          </button>
+        </div>
+        <span class="concept-phase-count">
+          <span class="concept-phase-count__pos">${posCount} pos-phases</span><span class="concept-phase-count__sep">,&nbsp;</span><span class="concept-phase-count__neg">${negCount} neg-phases</span>
+        </span>
+      </div>
+
+      <!-- Inline tree view (toggled separately) -->
+      <div id="concept-tree-${concept.id}" class="hidden mt-2 pt-2 border-t border-slate-800/40 text-[10px] text-slate-400 bg-slate-950/20 p-2 rounded" onclick="event.stopPropagation()">
+        ${treeHtml || '<div class="text-slate-600">No phases</div>'}
       </div>
     `;
 
-    // Click on card body (not delete button) → load concept
+    // Active card highlight
+    if (isActive) {
+      card.classList.add("concept-card--active");
+    }
+
+    // Click on card body (not delete / header buttons / inputs) → activate concept
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".concept-card-delete")) return;
+      if (e.target.closest(".concept-card-delete") || e.target.closest("button") || e.target.closest("input")) return;
       loadConcept(concept.id);
     });
 
@@ -1757,11 +2164,12 @@ function renderConceptCards() {
 
     container.appendChild(card);
   });
-}
+} // end renderConceptCards
 
 // ---- LOAD: Apply concept to workspace ----
 function loadConcept(conceptId) {
   const concept = state.concepts.find(c => c.id === conceptId);
+
   if (!concept) return;
 
   if (!confirm(`Load concept "${concept.name}"?\n現在のワークスペースは上書きされます。`)) return;
@@ -1782,10 +2190,19 @@ function loadConcept(conceptId) {
     return idxA - idxB;
   });
 
-  state.phases = JSON.parse(JSON.stringify(allPhases));
+  const restoredPhases = JSON.parse(JSON.stringify(allPhases));
+  restoredPhases.forEach(ensurePhaseStructure);
+  state.phases = restoredPhases;
+
+  // アクティブコンセプトを設定してコミットボタンを有効化
+  state.activeConcept = conceptId;
+  updateCommitButton();
+
   showToast(`Loaded concept "${concept.name}" (${Object.keys(concept.layers).join(", ")})`, "success");
   renderApp();
+  renderConceptLibrary(); // カードのアクティブ状態を更新
 }
+
 
 // ---- DELETE ----
 function deleteConcept(conceptId) {
@@ -1795,6 +2212,11 @@ function deleteConcept(conceptId) {
   if (!confirm(`Delete concept "${name}"?`)) return;
   state.concepts.splice(idx, 1);
   saveConceptsToStorage();
+  // アクティブコンセプトが削除された場合はボタンを無効化
+  if (state.activeConcept === conceptId) {
+    state.activeConcept = null;
+    updateCommitButton();
+  }
   showToast(`Concept "${name}" deleted.`, "warning");
   renderConceptLibrary();
 }
@@ -1854,6 +2276,9 @@ function openSaveConceptModal() {
   document.getElementById("input-concept-category-custom").value = "";
   document.getElementById("input-new-layer-name").value = "";
 
+  // SAFETY: Ensure all phases have the correct data structure before reading them
+  state.phases.forEach(ensurePhaseStructure);
+
   // Build phase-to-layer assignment rows
   buildPhaseLayerRows();
 
@@ -1895,7 +2320,7 @@ function buildPhaseLayerRows() {
     phaseLabel.innerHTML = `
       ${typeTag}
       <span class="text-xs font-semibold text-slate-200 truncate">${phase.name}</span>
-      <span class="text-[10px] text-slate-600 shrink-0">${phase.tokens.length} tok</span>
+      <span class="text-[10px] text-slate-600 shrink-0">${getPhaseTokens(phase).length} tok</span>
     `;
 
     // Layer select
@@ -1973,6 +2398,7 @@ function saveConceptFromModal() {
     if (!layersMap[layerName]) layersMap[layerName] = [];
     
     let phaseCopy = JSON.parse(JSON.stringify(phase));
+    ensurePhaseStructure(phaseCopy);
     phaseCopy._originalIndex = phaseIndexCounter++;
     layersMap[layerName].push(phaseCopy);
   });
@@ -2046,7 +2472,739 @@ function initConceptLibrary() {
       closeConceptModal();
     }
   });
+
+  // ---- コミットボタン ----
+  document.getElementById("btn-commit-to-concept").addEventListener("click", commitToConceptHistory);
+
+  // 起動時にボタン状態を同期
+  updateCommitButton();
 }
+
+// ============================================================
+//  CONCEPT GIT-LIKE COMMIT HISTORY
+// ============================================================
+
+/**
+ * コミットボタンの有効/無効・ラベルを更新する。
+ * state.activeConcept が設定されているときのみ有効化する。
+ */
+function updateCommitButton() {
+  const btn = document.getElementById("btn-commit-to-concept");
+  const label = document.getElementById("btn-commit-label");
+  if (!btn) return;
+
+  const concept = state.activeConcept
+    ? state.concepts.find(c => c.id === state.activeConcept)
+    : null;
+
+  if (concept) {
+    btn.disabled = false;
+    const commitCount = (concept.commits || []).length;
+    if (label) label.textContent = `Commit → ${concept.name} (${commitCount})`;
+  } else {
+    btn.disabled = true;
+    if (label) label.textContent = "Commit";
+  }
+}
+
+/**
+ * 現在の state.phases をディープコピーして、
+ * アクティブコンセプトの commits 配列に新しいコミットとして追加し、
+ * localStorage へ保存する。
+ *
+ * データ構造:
+ *   concept.commits = [
+ *     {
+ *       id: "commit_<timestamp>",
+ *       message: "Commit #N",
+ *       timestamp: ISO string,
+ *       phases: [ ...deep copy of state.phases ]
+ *     },
+ *     ...
+ *   ]
+ */
+function commitToConceptHistory() {
+  if (!state.activeConcept) {
+    showToast("コンセプトが選択されていません。Libraryからコンセプトをロードしてください。", "warning");
+    return;
+  }
+
+  const concept = state.concepts.find(c => c.id === state.activeConcept);
+  if (!concept) {
+    showToast("選択中のコンセプトが見つかりません。", "error");
+    state.activeConcept = null;
+    updateCommitButton();
+    return;
+  }
+
+  // commits 配列が存在しない旧データを移行
+  if (!Array.isArray(concept.commits)) {
+    concept.commits = [];
+  }
+
+  const commitIndex = concept.commits.length + 1;
+  const newCommit = {
+    id: "commit_" + Date.now(),
+    message: `Commit #${commitIndex}`,
+    timestamp: new Date().toISOString(),
+    phases: JSON.parse(JSON.stringify(state.phases)) // ワークスペースのディープコピー
+  };
+
+  concept.commits.push(newCommit);
+  saveConceptsToStorage();
+  updateCommitButton();
+  renderConceptLibrary();
+
+  showToast(
+    `✔ Commit #${commitIndex} を "${concept.name}" に保存しました（計 ${concept.commits.length} commits）`
+  );
+}
+
+// ---- CONCEPT ARCHIVE & EXTRA ACTIONS ----
+
+window.renderConceptArchive = function() {
+  const container = document.getElementById("concept-archive-list-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!state.activeConcept) {
+    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">コンセプトをロードするとコミット履歴が表示されます。</p>`;
+    return;
+  }
+
+  const concept = state.concepts.find(c => c.id === state.activeConcept);
+  if (!concept) {
+    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">コンセプトが見つかりません。</p>`;
+    return;
+  }
+
+  const commits = concept.commits || [];
+  if (commits.length === 0) {
+    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">コミット履歴がありません。"Commit"ボタンで履歴を作成できます。</p>`;
+    return;
+  }
+
+  // Render commits in descending order
+  [...commits].reverse().forEach(commit => {
+    const card = document.createElement("div");
+    card.className = "flex items-center justify-between p-2.5 rounded-lg border border-slate-700/40 bg-slate-800/20 hover:bg-slate-850 hover:border-slate-600 transition group text-xs";
+
+    const dateStr = new Date(commit.timestamp).toLocaleString();
+
+    card.innerHTML = `
+      <div class="flex-grow text-left">
+        <div class="font-bold text-slate-300">${commit.message}</div>
+        <div class="text-[9px] text-slate-500 font-mono mt-0.5">${dateStr}</div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="restoreCommit('${concept.id}', '${commit.id}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-300 hover:text-purple-200 transition rounded text-[10px] font-semibold">
+          Restore
+        </button>
+        <button onclick="deleteCommit('${concept.id}', '${commit.id}')" class="text-rose-400 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition p-1">
+          <i class="fa-solid fa-trash-can text-[10px]"></i>
+        </button>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+};
+
+window.restoreCommit = function(conceptId, commitId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  const commit = (concept.commits || []).find(c => c.id === commitId);
+  if (!commit) return;
+
+  if (!confirm(`Restore to "${commit.message}"?\n現在のワークスペースは上書きされます。`)) return;
+
+  const restoredPhases = JSON.parse(JSON.stringify(commit.phases));
+  restoredPhases.forEach(ensurePhaseStructure);
+  state.phases = restoredPhases;
+
+  showToast(`Restored to commit "${commit.message}"`, "success");
+  renderApp();
+};
+
+window.deleteCommit = function(conceptId, commitId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  const idx = (concept.commits || []).findIndex(c => c.id === commitId);
+  if (idx === -1) return;
+
+  if (!confirm(`Delete commit "${concept.commits[idx].message}"?`)) return;
+
+  concept.commits.splice(idx, 1);
+  saveConceptsToStorage();
+  updateCommitButton();
+  renderConceptLibrary();
+  showToast("Commit deleted.", "warning");
+};
+
+window.startEditConceptTitle = function(conceptId, event) {
+  if (event) event.stopPropagation();
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  const titleEl = document.getElementById(`concept-title-${conceptId}`);
+  if (!titleEl) return;
+
+  titleEl.innerHTML = `
+    <input type="text" 
+           id="edit-concept-title-input-${conceptId}" 
+           value="${concept.name}" 
+           class="bg-slate-950/80 border border-slate-700 rounded px-2 py-0.5 text-xs font-bold text-slate-100 focus:outline-none focus:border-purple-500 w-36"
+           onkeydown="handleEditConceptTitleKeydown(event, '${conceptId}')"
+           onblur="saveConceptTitle('${conceptId}')"
+           onclick="event.stopPropagation()"
+    >
+  `;
+
+  const input = document.getElementById(`edit-concept-title-input-${conceptId}`);
+  if (input) {
+    input.focus();
+    input.select();
+  }
+};
+
+window.handleEditConceptTitleKeydown = function(e, conceptId) {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    saveConceptTitle(conceptId);
+  } else if (e.key === "Escape") {
+    renderConceptLibrary();
+  }
+};
+
+window.saveConceptTitle = function(conceptId) {
+  const input = document.getElementById(`edit-concept-title-input-${conceptId}`);
+  if (!input) return;
+
+  const newName = input.value.trim();
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (concept && newName) {
+    concept.name = newName;
+    saveConceptsToStorage();
+    showToast(`Concept renamed to "${newName}"`);
+  }
+  renderConceptLibrary();
+};
+
+// ============================================================
+//  TIME-LINE TREE  &  DIFF ENGINE
+// ============================================================
+
+// State for the currently open timeline
+let _timelineConceptId = null;   // which concept's tree is open
+let _activeDiffIndex   = null;   // index in commits[] of the OLDER commit in the selected diff pair
+let _activeDiffTab     = 'note'; // currently selected diff tab
+
+/**
+ * Called from the card's "tree" button.
+ * Shows the TIME-LINE TREE panel for the given concept.
+ */
+window.toggleConceptTree = function(conceptId, event) {
+  if (event) event.stopPropagation();
+
+  const panel = document.getElementById('timeline-tree-panel');
+  if (!panel) return;
+
+  // If the same concept is already open, toggle closed
+  if (_timelineConceptId === conceptId && !panel.classList.contains('hidden')) {
+    closeTimelineTree();
+    return;
+  }
+
+  _timelineConceptId = conceptId;
+  _activeDiffIndex   = null;
+  _activeDiffTab     = 'note';
+
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  // Update header name
+  const nameEl = document.getElementById('timeline-concept-name');
+  if (nameEl) nameEl.textContent = concept.name;
+
+  // Show panel
+  panel.classList.remove('hidden');
+
+  // Scroll panel into view smoothly
+  setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+
+  renderTimelineTree(conceptId);
+
+  // Auto-select the newest diff (between last two commits) if ≥2 commits
+  const commits = concept.commits || [];
+  if (commits.length >= 2) {
+    // newest diff = between commits[length-2] and commits[length-1]
+    openDiff(conceptId, commits.length - 2);
+  } else {
+    const diffArea = document.getElementById('diff-content-area');
+    if (diffArea) diffArea.innerHTML = '<p class="text-slate-600 text-center py-6">コミットが2件以上必要です。</p>';
+  }
+};
+
+/**
+ * Close the timeline panel.
+ */
+window.closeTimelineTree = function() {
+  const panel = document.getElementById('timeline-tree-panel');
+  if (panel) panel.classList.add('hidden');
+  _timelineConceptId = null;
+  _activeDiffIndex   = null;
+};
+
+/**
+ * Scroll the timeline list up (-1) or down (+1) by one page step.
+ */
+window.scrollTimeline = function(dir) {
+  const list = document.getElementById('timeline-list');
+  if (!list) return;
+  list.scrollBy({ top: dir * 80, behavior: 'smooth' });
+};
+
+/**
+ * Render the vertical dashed timeline for a concept.
+ */
+function renderTimelineTree(conceptId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  const list    = document.getElementById('timeline-list');
+  if (!concept || !list) return;
+
+  list.innerHTML = '';
+  const commits = concept.commits || [];
+
+  if (commits.length === 0) {
+    list.innerHTML = '<p class="text-slate-600 text-xs text-center py-6">コミット履歴がありません。</p>';
+    return;
+  }
+
+  // Build from newest to oldest (visual top = most recent)
+  [...commits].reverse().forEach((commit, revIdx) => {
+    const realIdx = commits.length - 1 - revIdx; // index in commits[] (oldest=0)
+    const dateStr = formatTimestampFull(commit.timestamp);
+
+    /* ○ Commit row */
+    const commitRow = document.createElement('div');
+    commitRow.className = 'tl-row items-center mb-0';
+    commitRow.innerHTML = `
+      <div class="tl-connector">
+        ${revIdx === 0 ? '' : '<div class="tl-connector-line" style="min-height:8px"></div>'}
+        <button class="tl-node-commit ${_activeDiffIndex === realIdx ? 'active' : ''}"
+                title="このコミットをARCHIVEに復元"
+                onclick="restoreCommitToArchive('${conceptId}','${commit.id}')">
+          ○
+        </button>
+        <div class="tl-connector-line"></div>
+      </div>
+      <div class="tl-label tl-label-commit">${commit.message}<br>
+        <span class="font-mono text-[9px] text-slate-500">${dateStr}</span>
+      </div>
+    `;
+    list.appendChild(commitRow);
+
+    /* × Diff row (between this commit and the next older one) */
+    if (realIdx > 0) {
+      const olderCommit = commits[realIdx - 1];
+      const diffRow = document.createElement('div');
+      diffRow.className = 'tl-row items-center mb-0';
+      diffRow.innerHTML = `
+        <div class="tl-connector">
+          <div class="tl-connector-line"></div>
+          <button class="tl-node-diff ${_activeDiffIndex === realIdx - 1 ? 'active' : ''}"
+                  title="${olderCommit.message} → ${commit.message} の差分"
+                  onclick="openDiff('${conceptId}', ${realIdx - 1})">
+            ×
+          </button>
+          <div class="tl-connector-line"></div>
+        </div>
+        <div class="tl-label tl-label-diff">${olderCommit.message} → ${commit.message} change</div>
+      `;
+      list.appendChild(diffRow);
+    }
+  });
+}
+
+/**
+ * Format timestamp as YYYY/MM/DD/hh:mm:ss
+ */
+function formatTimestampFull(isoStr) {
+  const d = new Date(isoStr);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}/${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/**
+ * Restore a specific commit's phases to the ARCHIVE panel
+ * (does NOT touch current workspace).
+ */
+window.restoreCommitToArchive = function(conceptId, commitId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+  const commit = (concept.commits || []).find(c => c.id === commitId);
+  if (!commit) return;
+
+  if (!confirm(`「${commit.message}」の構成をSTYLE CONCEPT ARCHIVEに復元しますか？\n（ワークスペースは変更されません）`)) return;
+
+  // Store in concept.archivedCommits (separate from commits[])
+  if (!Array.isArray(concept.archivedCommits)) concept.archivedCommits = [];
+  // Avoid duplicates
+  const alreadyArchived = concept.archivedCommits.some(a => a.sourceCommitId === commitId);
+  if (alreadyArchived) {
+    showToast(`「${commit.message}」は既にARCHIVEに存在します。`, 'warning');
+    return;
+  }
+
+  concept.archivedCommits.push({
+    id: 'arch_' + Date.now(),
+    sourceCommitId: commitId,
+    sourceMessage: commit.message,
+    timestamp: commit.timestamp,
+    phases: JSON.parse(JSON.stringify(commit.phases))
+  });
+
+  saveConceptsToStorage();
+  renderConceptArchive();
+  showToast(`「${commit.message}」をARCHIVEに復元しました。`, 'success');
+};
+
+/**
+ * Open the diff panel for the gap between commits[idx] and commits[idx+1].
+ */
+window.openDiff = function(conceptId, olderIdx) {
+  _timelineConceptId = conceptId;
+  _activeDiffIndex   = olderIdx;
+  _activeDiffTab     = 'note';
+
+  // Re-render timeline to reflect active state
+  renderTimelineTree(conceptId);
+
+  // Render the current tab
+  renderDiffTab(_activeDiffTab);
+
+  // Ensure Note tab is visually active
+  switchDiffTab('note', false);
+};
+
+/**
+ * Switch which diff tab is shown.
+ * @param {string} tab
+ * @param {boolean} [updateState=true]
+ */
+window.switchDiffTab = function(tab, updateState = true) {
+  if (updateState) _activeDiffTab = tab;
+
+  // Update tab button styles
+  document.querySelectorAll('.diff-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+  });
+
+  renderDiffTab(tab);
+};
+
+/**
+ * Dispatch to the correct diff renderer based on tab name.
+ */
+function renderDiffTab(tab) {
+  const area = document.getElementById('diff-content-area');
+  if (!area) return;
+
+  if (_activeDiffIndex === null || _timelineConceptId === null) {
+    area.innerHTML = '<p class="text-slate-600 text-center py-6">← コミット行の × をクリックして差分を表示</p>';
+    return;
+  }
+
+  const concept = state.concepts.find(c => c.id === _timelineConceptId);
+  if (!concept) return;
+
+  const commits = concept.commits || [];
+  const olderCommit = commits[_activeDiffIndex];
+  const newerCommit = commits[_activeDiffIndex + 1];
+  if (!olderCommit || !newerCommit) return;
+
+  const label = `${olderCommit.message} → ${newerCommit.message}`;
+
+  switch (tab) {
+    case 'note':   area.innerHTML = renderDiffNote(concept, olderCommit, newerCommit); break;
+    case 'weight': area.innerHTML = renderDiffWeight(olderCommit, newerCommit, label); break;
+    case 'token':  area.innerHTML = renderDiffToken(olderCommit, newerCommit, label); break;
+    case 'core':   area.innerHTML = renderDiffCore(olderCommit, newerCommit, label); break;
+    case 'pattern':area.innerHTML = renderDiffPattern(olderCommit, newerCommit, label); break;
+    case 'phase':  area.innerHTML = renderDiffPhase(olderCommit, newerCommit, label); break;
+    default: area.innerHTML = '';
+  }
+
+  // Wire up note save button after render
+  if (tab === 'note') {
+    const saveBtn = document.getElementById('btn-save-diff-note');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const ta = document.getElementById('diff-note-input');
+        if (!ta) return;
+        // Store note on the NEWER commit (the one that introduces the change)
+        newerCommit.note = ta.value;
+        saveConceptsToStorage();
+        showToast('Note saved!');
+      });
+    }
+  }
+}
+
+/* ---------------------------------------------------------------
+   NOTE TAB
+--------------------------------------------------------------- */
+function renderDiffNote(concept, olderCommit, newerCommit, label) {
+  const existingNote = newerCommit.note || '';
+  return `
+    <div class="diff-section-title">Note — ${newerCommit.message}</div>
+    <p class="text-slate-500 mb-2 text-[10px]">このコミットに関するメモを自由に記録できます。</p>
+    <textarea id="diff-note-input" class="diff-note-textarea" placeholder="日本語でメモを入力…">${existingNote}</textarea>
+    <button id="btn-save-diff-note" class="mt-2 px-3 py-1.5 bg-cyan-900/40 hover:bg-cyan-800/50 border border-cyan-600/30 text-cyan-300 hover:text-cyan-200 rounded text-[10px] font-semibold transition flex items-center gap-1.5">
+      <i class="fa-solid fa-floppy-disk text-[9px]"></i> Save Note
+    </button>
+  `;
+}
+
+/* ---------------------------------------------------------------
+   WEIGHT TAB
+--------------------------------------------------------------- */
+function renderDiffWeight(olderCommit, newerCommit, label) {
+  const changes = [];
+
+  newerCommit.phases.forEach((newPhase, pi) => {
+    const oldPhase = olderCommit.phases.find(p => p.id === newPhase.id);
+    if (!oldPhase) return;
+
+    const newTokens = getAllPhaseTokens(newPhase);
+    const oldTokens = getAllPhaseTokens(oldPhase);
+
+    newTokens.forEach(newTok => {
+      const oldTok = oldTokens.find(t => t.id === newTok.id);
+      if (!oldTok) return;
+      if (Math.abs(parseFloat(newTok.weight) - parseFloat(oldTok.weight)) > 0.001) {
+        // find pattern context
+        const patternCtx = getTokenPatternContext(newPhase, newTok.id);
+        changes.push({
+          text: newTok.text,
+          oldW: parseFloat(oldTok.weight).toFixed(2),
+          newW: parseFloat(newTok.weight).toFixed(2),
+          phase: newPhase.name,
+          ctx: patternCtx
+        });
+      }
+    });
+  });
+
+  if (changes.length === 0) {
+    return `<div class="diff-section-title">Weight Changes — ${label}</div><p class="text-slate-600 py-4 text-center">変更なし</p>`;
+  }
+
+  let html = `<div class="diff-section-title">Weight Changes — ${label}</div>`;
+  changes.forEach(c => {
+    const dir = parseFloat(c.newW) > parseFloat(c.oldW) ? '↑' : '↓';
+    html += `<div class="diff-mod font-mono">(${c.text}:${c.oldW}) → (${c.text}:${c.newW}) ${dir} <span class="text-slate-500 text-[9px]">[${c.phase}${c.ctx}]</span></div>`;
+  });
+  return html;
+}
+
+/* ---------------------------------------------------------------
+   TOKEN TAB
+--------------------------------------------------------------- */
+function renderDiffToken(olderCommit, newerCommit, label) {
+  let html = `<div class="diff-section-title">Token Changes — ${label}</div>`;
+  let hasChange = false;
+
+  newerCommit.phases.forEach(newPhase => {
+    const oldPhase = olderCommit.phases.find(p => p.id === newPhase.id);
+
+    const newTokens = getAllPhaseTokens(newPhase);
+    const oldTokens = oldPhase ? getAllPhaseTokens(oldPhase) : [];
+
+    const addedIds   = newTokens.filter(t => !oldTokens.find(o => o.id === t.id));
+    const removedIds = oldTokens.filter(t => !newTokens.find(n => n.id === t.id));
+
+    if (addedIds.length === 0 && removedIds.length === 0) return;
+    hasChange = true;
+
+    html += `<div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase">${newPhase.name}</div>`;
+    addedIds.forEach(t => {
+      html += `<div class="diff-add">+ ${t.text}</div>`;
+    });
+    removedIds.forEach(t => {
+      html += `<div class="diff-del">- <em>${t.text}</em></div>`;
+    });
+  });
+
+  // Phases only in older (deleted phases)
+  olderCommit.phases.forEach(oldPhase => {
+    if (!newerCommit.phases.find(p => p.id === oldPhase.id)) {
+      const toks = getAllPhaseTokens(oldPhase);
+      if (toks.length > 0) {
+        hasChange = true;
+        html += `<div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase">${oldPhase.name} (Phase削除)</div>`;
+        toks.forEach(t => {
+          html += `<div class="diff-del">- <em>${t.text}</em></div>`;
+        });
+      }
+    }
+  });
+
+  if (!hasChange) html += '<p class="text-slate-600 py-4 text-center">変更なし</p>';
+  return html;
+}
+
+/* ---------------------------------------------------------------
+   CORE TAB
+--------------------------------------------------------------- */
+function renderDiffCore(olderCommit, newerCommit, label) {
+  let html = `<div class="diff-section-title">Core Mark Changes — ${label}</div>`;
+  let hasChange = false;
+
+  newerCommit.phases.forEach(newPhase => {
+    if (newPhase.isNegative) return;
+    const oldPhase  = olderCommit.phases.find(p => p.id === newPhase.id);
+    const newTokens = getAllPhaseTokens(newPhase);
+    const oldTokens = oldPhase ? getAllPhaseTokens(oldPhase) : [];
+
+    newTokens.forEach(newTok => {
+      const oldTok = oldTokens.find(t => t.id === newTok.id);
+      const wasCore = oldTok ? !!oldTok.isCore : false;
+      const isCore  = !!newTok.isCore;
+      if (wasCore !== isCore) {
+        hasChange = true;
+        if (isCore) {
+          html += `<div class="diff-add">★ Core 付与: ${newTok.text} <span class="text-[9px] text-slate-500">[${newPhase.name}]</span></div>`;
+        } else {
+          html += `<div class="diff-del">☆ Core 解除: <em>${newTok.text}</em> <span class="text-[9px] text-slate-500">[${newPhase.name}]</span></div>`;
+        }
+      }
+    });
+  });
+
+  if (!hasChange) html += '<p class="text-slate-600 py-4 text-center">Core変更なし</p>';
+  return html;
+}
+
+/* ---------------------------------------------------------------
+   PATTERN TAB
+--------------------------------------------------------------- */
+function renderDiffPattern(olderCommit, newerCommit, label) {
+  let html = `<div class="diff-section-title">Pattern Changes — ${label}</div>`;
+  let hasChange = false;
+
+  newerCommit.phases.forEach(newPhase => {
+    if (newPhase.isNegative) return;
+    const oldPhase = olderCommit.phases.find(p => p.id === newPhase.id);
+    const newPats  = newPhase.patterns || [];
+    const oldPats  = oldPhase ? (oldPhase.patterns || []) : [];
+
+    const added   = newPats.length - oldPats.length;
+    if (added === 0) return;
+    hasChange = true;
+
+    const dir = added > 0 ? 'diff-add' : 'diff-del';
+    const sign = added > 0 ? `+${added} Pattern追加` : `${added} Pattern削除`;
+    html += `<div class="${dir}">${sign}: [${newPhase.name}] (${oldPats.length} → ${newPats.length})</div>`;
+  });
+
+  if (!hasChange) html += '<p class="text-slate-600 py-4 text-center">Pattern変更なし</p>';
+  return html;
+}
+
+/* ---------------------------------------------------------------
+   PHASE TAB
+--------------------------------------------------------------- */
+function renderDiffPhase(olderCommit, newerCommit, label) {
+  let html = `<div class="diff-section-title">Phase Changes — ${label}</div>`;
+
+  const oldIds = olderCommit.phases.map(p => p.id);
+  const newIds = newerCommit.phases.map(p => p.id);
+
+  // Added
+  const addedPhases   = newerCommit.phases.filter(p => !oldIds.includes(p.id));
+  // Removed
+  const removedPhases = olderCommit.phases.filter(p => !newIds.includes(p.id));
+
+  addedPhases.forEach(p => {
+    html += `<div class="diff-add">+ <em>${p.name}</em> (${p.isNegative ? 'Negative' : 'Positive'})</div>`;
+  });
+  removedPhases.forEach(p => {
+    html += `<div class="diff-del">- <em>${p.name}</em> (${p.isNegative ? 'Negative' : 'Positive'})</div>`;
+  });
+
+  // Order changes (for phases present in both)
+  const commonNewPhases = newerCommit.phases.filter(p => oldIds.includes(p.id));
+  const commonOldPhases = olderCommit.phases.filter(p => newIds.includes(p.id));
+
+  const orderChanged = commonNewPhases.some((p, i) => p.id !== commonOldPhases[i]?.id);
+
+  if (orderChanged) {
+    html += `<div class="diff-section-title mt-3">Phase Order</div>`;
+    html += `<div class="flex flex-col gap-1 mb-1"><div class="text-[9px] text-slate-500 mb-1">Before:</div>`;
+    html += commonOldPhases.map(p =>
+      `<span class="phase-order-bar ${p.isNegative ? 'neg' : 'pos'}">${p.name}</span>`
+    ).join('<span class="text-slate-600 mx-1 text-xs">→</span>');
+    html += `</div><div class="flex flex-col gap-1 mt-1"><div class="text-[9px] text-slate-500 mb-1">After:</div>`;
+    html += commonNewPhases.map(p =>
+      `<span class="phase-order-bar ${p.isNegative ? 'neg' : 'pos'}">${p.name}</span>`
+    ).join('<span class="text-slate-600 mx-1 text-xs">→</span>');
+    html += '</div>';
+  }
+
+  if (addedPhases.length === 0 && removedPhases.length === 0 && !orderChanged) {
+    html += '<p class="text-slate-600 py-4 text-center">Phase変更なし</p>';
+  }
+
+  return html;
+}
+
+/* ---------------------------------------------------------------
+   HELPERS
+--------------------------------------------------------------- */
+
+/**
+ * Get all tokens in a phase across all patterns (or direct tokens for neg).
+ */
+function getAllPhaseTokens(phase) {
+  if (!phase) return [];
+  if (phase.isNegative) return phase.tokens || [];
+  const pats = phase.patterns || [];
+  const all = [];
+  pats.forEach(pat => { (pat.tokens || []).forEach(t => all.push(t)); });
+  return all;
+}
+
+/**
+ * Return a context string like ", Pattern 2" for token location.
+ */
+function getTokenPatternContext(phase, tokenId) {
+  if (!phase || phase.isNegative) return '';
+  const pats = phase.patterns || [];
+  for (let i = 0; i < pats.length; i++) {
+    if ((pats[i].tokens || []).find(t => t.id === tokenId)) {
+      return `, Pattern ${i + 1}`;
+    }
+  }
+  return '';
+}
+
+window.exportSingleConcept = function(conceptId, event) {
+  if (event) event.stopPropagation();
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(concept, null, 2));
+  const a = document.createElement('a');
+  a.setAttribute("href", dataStr);
+  a.setAttribute("download", `concept_${concept.name.replace(/\s+/g, '_')}_${Date.now()}.json`);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  showToast(`Concept "${concept.name}" exported!`);
+};
 
 // Patch renderApp to also refresh Concept Library
 const _originalRenderApp = renderApp;
@@ -2421,7 +3579,8 @@ function runSemanticAnalysis() {
 
   state.phases.forEach(phase => {
     if (!phase.isActive) return;
-    phase.tokens.forEach(tok => {
+    const tokens = getPhaseTokens(phase);
+    tokens.forEach(tok => {
       if (!tok.isActive) return;
       if (phase.isNegative) {
         negTokens.push({ text: tok.text, weight: parseFloat(tok.weight) });
