@@ -1967,7 +1967,15 @@ let _conceptActiveCat = null;
 function loadConceptsFromStorage() {
   try {
     const raw = localStorage.getItem(LS_CONCEPTS_KEY);
-    if (raw) state.concepts = JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Fallback: ensure isPinned / isBookmarked exist on every concept
+      state.concepts = parsed.map(c => ({
+        isPinned: false,
+        isBookmarked: false,
+        ...c
+      }));
+    }
   } catch (e) {
     console.error("Failed to load concepts:", e);
     state.concepts = [];
@@ -2051,9 +2059,14 @@ function renderConceptCards() {
     return;
   }
 
-  filtered.forEach(concept => {
+  // Sort: pinned first (max 5), then the rest — preserve original order within each group
+  const pinned   = filtered.filter(c => c.isPinned).slice(0, 5);
+  const unpinned = filtered.filter(c => !c.isPinned);
+  const sorted   = [...pinned, ...unpinned];
+
+  sorted.forEach(concept => {
     const card = document.createElement("div");
-    card.className = "concept-card";
+    card.className = "concept-card" + (concept.isPinned ? " concept-card--pinned" : "");
     card.setAttribute("data-concept-id", concept.id);
 
     // Build layer badges
@@ -2079,33 +2092,36 @@ function renderConceptCards() {
       });
     });
 
-    // Generate tree HTML
-    let treeHtml = "";
-    Object.entries(concept.layers || {}).forEach(([layerName, phases]) => {
-      if (phases && phases.length > 0) {
-        treeHtml += `<div class="font-bold text-slate-400 mt-1 uppercase text-[9px] tracking-wider">${layerName}</div>`;
-        phases.forEach(p => {
-          const typeSymbol = p.isNegative ? "[-]" : "[+]";
-          treeHtml += `<div class="pl-2 text-[9px] text-slate-500">${typeSymbol} ${p.name}</div>`;
-        });
-      }
-    });
-
     // Is this the active concept?
-    const isActive = state.activeConcept === concept.id;
+    const isActive     = state.activeConcept === concept.id;
+    const isPinned     = !!concept.isPinned;
+    const isBookmarked = !!concept.isBookmarked;
 
     card.innerHTML = `
+      <!-- Delete button (absolute top-right) -->
       <button class="concept-card-delete" data-delete-id="${concept.id}" title="Delete Concept">
         <i class="fa-solid fa-trash-can text-[10px]"></i>
       </button>
 
-      <!-- Title row: name + pen edit button -->
-      <div class="flex items-center gap-2 pr-6 mb-1.5 select-none" onclick="event.stopPropagation()">
+      <!-- Title row: name + pen edit + pin + bookmark -->
+      <div class="flex items-center gap-1.5 pr-6 mb-1.5 select-none" onclick="event.stopPropagation()">
         <div class="concept-card-name flex-grow" id="concept-title-${concept.id}">${concept.name}</div>
         <button onclick="startEditConceptTitle('${concept.id}', event)"
                 class="text-slate-600 hover:text-slate-300 transition shrink-0 p-1"
                 title="Rename Concept">
           <i class="fa-solid fa-pen text-[9px]"></i>
+        </button>
+        <!-- Pin button -->
+        <button class="btn-concept-pin ${isPinned ? 'is-pinned' : ''}"
+                title="${isPinned ? 'ピン留め解除' : 'ピン留め（最大5枚）'}"
+                onclick="toggleConceptPin('${concept.id}', event)">
+          <i class="fa-solid fa-thumbtack"></i>
+        </button>
+        <!-- Bookmark button -->
+        <button class="btn-concept-bookmark ${isBookmarked ? 'is-bookmarked' : ''}"
+                title="${isBookmarked ? 'ブックマーク解除' : 'ブックマーク'}"
+                onclick="toggleConceptBookmark('${concept.id}', event)">
+          <i class="fa-solid fa-bookmark"></i>
         </button>
       </div>
 
@@ -2115,7 +2131,7 @@ function renderConceptCards() {
         ${badgesHtml}
       </div>
 
-      <!-- Action row: commit | tree | export  +  pos/neg counts right-aligned -->
+      <!-- Action row: commit | export  +  pos/neg counts right-aligned -->
       <div class="concept-card-actions">
         <div class="concept-card-action-links">
           <button onclick="event.stopPropagation(); loadConcept('${concept.id}')"
@@ -2123,25 +2139,20 @@ function renderConceptCards() {
                   title="${commitCount} commits — click to activate this concept">
             ${commitCount} commit${commitCount !== 1 ? 's' : ''}
           </button>
-          <button onclick="toggleConceptTree('${concept.id}', event)"
-                  class="concept-action-link"
-                  title="Show/Hide Time-Line Tree">
-            tree
-          </button>
           <button onclick="exportSingleConcept('${concept.id}', event)"
                   class="concept-action-link"
                   title="Export this concept">
             export
           </button>
+          <button onclick="toggleConceptTree('${concept.id}', event)"
+                  class="concept-action-link"
+                  title="Show commit timeline tree">
+            tree
+          </button>
         </div>
         <span class="concept-phase-count">
-          <span class="concept-phase-count__pos">${posCount} pos-phases</span><span class="concept-phase-count__sep">,&nbsp;</span><span class="concept-phase-count__neg">${negCount} neg-phases</span>
+          <span class="concept-phase-count__pos">${posCount} pos</span><span class="concept-phase-count__sep">&nbsp;/&nbsp;</span><span class="concept-phase-count__neg">${negCount} neg</span>
         </span>
-      </div>
-
-      <!-- Inline tree view (toggled separately) -->
-      <div id="concept-tree-${concept.id}" class="hidden mt-2 pt-2 border-t border-slate-800/40 text-[10px] text-slate-400 bg-slate-950/20 p-2 rounded" onclick="event.stopPropagation()">
-        ${treeHtml || '<div class="text-slate-600">No phases</div>'}
       </div>
     `;
 
@@ -2150,7 +2161,7 @@ function renderConceptCards() {
       card.classList.add("concept-card--active");
     }
 
-    // Click on card body (not delete / header buttons / inputs) → activate concept
+    // Click on card body → activate concept
     card.addEventListener("click", (e) => {
       if (e.target.closest(".concept-card-delete") || e.target.closest("button") || e.target.closest("input")) return;
       loadConcept(concept.id);
@@ -2165,6 +2176,38 @@ function renderConceptCards() {
     container.appendChild(card);
   });
 } // end renderConceptCards
+
+// ---- PIN & BOOKMARK TOGGLES ----
+
+window.toggleConceptPin = function(conceptId, event) {
+  if (event) event.stopPropagation();
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  if (!concept.isPinned) {
+    // Check pin limit
+    const pinnedCount = state.concepts.filter(c => c.isPinned).length;
+    if (pinnedCount >= 5) {
+      showToast("ピン留めは最大5枚までです。", "warning");
+      return;
+    }
+  }
+
+  concept.isPinned = !concept.isPinned;
+  saveConceptsToStorage();
+  renderConceptCards();
+};
+
+window.toggleConceptBookmark = function(conceptId, event) {
+  if (event) event.stopPropagation();
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+
+  concept.isBookmarked = !concept.isBookmarked;
+  saveConceptsToStorage();
+  renderConceptCards();
+};
+
 
 // ---- LOAD: Apply concept to workspace ----
 function loadConcept(conceptId) {
@@ -2413,7 +2456,9 @@ function saveConceptFromModal() {
     name: nameInput,
     category: category,
     layers: layersMap,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    isPinned: false,
+    isBookmarked: false
   };
 
   state.concepts.push(concept);
@@ -2457,19 +2502,18 @@ function initConceptLibrary() {
     }
   });
 
-  // Export
-  document.getElementById("btn-export-concepts").addEventListener("click", exportConcepts);
+  // BOOKMARK modal
+  const btnOpenBM = document.getElementById("btn-open-bookmark-modal");
+  if (btnOpenBM) btnOpenBM.addEventListener("click", openBookmarkModal);
 
-  // Import
-  document.getElementById("file-import-concepts").addEventListener("change", (e) => {
-    importConcepts(e.target.files[0]);
-    e.target.value = "";
-  });
+  const btnCloseBM = document.getElementById("btn-close-bookmark-modal");
+  if (btnCloseBM) btnCloseBM.addEventListener("click", closeBookmarkModal);
 
   // Close modal on Escape (add to existing escape handler)
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       closeConceptModal();
+      closeBookmarkModal();
     }
   });
 
@@ -2479,6 +2523,135 @@ function initConceptLibrary() {
   // 起動時にボタン状態を同期
   updateCommitButton();
 }
+
+// ============================================================
+//  BOOKMARK MODAL
+// ============================================================
+
+function openBookmarkModal() {
+  const modal = document.getElementById("bookmark-list-modal");
+  if (!modal) return;
+
+  const listEl = document.getElementById("bookmark-modal-list");
+  listEl.innerHTML = "";
+
+  const bookmarked = state.concepts.filter(c => c.isBookmarked);
+
+  if (bookmarked.length === 0) {
+    listEl.innerHTML = `
+      <div class="concept-empty-state">
+        <i class="fa-solid fa-bookmark"></i>
+        <p class="text-xs font-medium mb-1">ブックマークがありません</p>
+        <p class="text-[10px]">カードの <i class="fa-solid fa-bookmark text-cyan-400"></i> アイコンでブックマークできます</p>
+      </div>
+    `;
+  } else {
+    bookmarked.forEach(concept => {
+      const commitCount = Math.max(1, (concept.commits || []).length);
+
+      // Count pos/neg
+      let posCount = 0;
+      let negCount = 0;
+      Object.values(concept.layers || {}).forEach(phases => {
+        (phases || []).forEach(phase => {
+          if (phase.isNegative) negCount++;
+          else posCount++;
+        });
+      });
+
+      const isActive = state.activeConcept === concept.id;
+
+      const card = document.createElement("div");
+      card.className = "bookmark-card mb-2";
+      card.style.cursor = "pointer";
+
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-grow min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-xs font-bold text-slate-100 truncate">${concept.name}</span>
+              ${concept.category ? `<span class="concept-category-chip shrink-0">${concept.category}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="concept-action-link ${isActive ? 'concept-action-link--active' : ''}">
+                ${commitCount} commit${commitCount !== 1 ? 's' : ''}
+              </span>
+              <span class="concept-phase-count">
+                <span class="concept-phase-count__pos">${posCount} pos</span>
+                <span class="concept-phase-count__sep">&nbsp;/&nbsp;</span>
+                <span class="concept-phase-count__neg">${negCount} neg</span>
+              </span>
+            </div>
+          </div>
+          <button onclick="toggleConceptBookmark('${concept.id}', event); openBookmarkModal();"
+                  class="btn-concept-bookmark is-bookmarked shrink-0 mt-0.5"
+                  title="ブックマーク解除">
+            <i class="fa-solid fa-bookmark"></i>
+          </button>
+        </div>
+      `;
+
+      // カードクリック → Workspace復元確認
+      card.addEventListener("click", (e) => {
+        // ブックマーク解除ボタンのクリックは無視
+        if (e.target.closest(".btn-concept-bookmark")) return;
+
+        if (!confirm("このカードに含まれる構成をWorkspaceに復元しますか？")) return;
+
+        // 最新のCommit状態を取得（commitがあればその最新、なければlayers）
+        const targetConcept = state.concepts.find(c => c.id === concept.id);
+        if (!targetConcept) return;
+
+        let restoredPhases;
+        const commits = targetConcept.commits || [];
+        if (commits.length > 0) {
+          // 最新のコミット (末尾) を使用
+          const latestCommit = commits[commits.length - 1];
+          restoredPhases = JSON.parse(JSON.stringify(latestCommit.phases));
+        } else {
+          // コミットがない場合は layers から復元
+          const allPhases = [];
+          Object.entries(targetConcept.layers || {}).forEach(([layerName, phases]) => {
+            (phases || []).forEach(phase => {
+              allPhases.push({ ...phase, _layerName: layerName });
+            });
+          });
+          allPhases.sort((a, b) => {
+            const idxA = a._originalIndex !== undefined ? a._originalIndex : Number.MAX_SAFE_INTEGER;
+            const idxB = b._originalIndex !== undefined ? b._originalIndex : Number.MAX_SAFE_INTEGER;
+            return idxA - idxB;
+          });
+          restoredPhases = JSON.parse(JSON.stringify(allPhases));
+        }
+
+        restoredPhases.forEach(ensurePhaseStructure);
+        state.phases = restoredPhases;
+        state.activeConcept = targetConcept.id;
+        updateCommitButton();
+
+        renderApp();
+        closeBookmarkModal();
+        showToast(`Workspace を "${targetConcept.name}" の最新状態に復元しました！`, "success");
+      });
+
+      listEl.appendChild(card);
+    });
+  }
+
+  modal.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeBookmarkModal() {
+  const modal = document.getElementById("bookmark-list-modal");
+  if (modal) modal.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+window.handleBookmarkModalOverlayClick = function(e) {
+  if (e.target.id === "bookmark-list-modal") closeBookmarkModal();
+};
+
 
 // ============================================================
 //  CONCEPT GIT-LIKE COMMIT HISTORY
