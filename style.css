@@ -2284,3 +2284,41 @@ input[type="range"].custom-slider::-moz-range-thumb {
   border-color: rgba(168,85,247,0.45);
   background: rgba(168,85,247,0.12);
 }
+
+/* ============================================================
+   TOKEN WEIGHT INPUT & LABELS INLINE LAYOUT
+   ============================================================ */
+
+.token-weight-input {
+  width: 44px;
+  height: 22px;
+  background: rgba(2, 6, 23, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #f8fafc;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.token-weight-input:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 6px rgba(6, 182, 212, 0.3);
+  background: rgba(2, 6, 23, 0.85);
+}
+
+.token-weight-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Ensure smooth inline layout without wrapping */
+.flex.items-center.gap-3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}

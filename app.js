@@ -868,7 +868,7 @@ function parseRawPrompt(rawText) {
       let cleanText = term;
       
       // Pattern: (text:1.23)
-      let explicitWeightMatch = term.match(/^\((.+):([0-9.]+)\)$/);
+      let explicitWeightMatch = term.match(/^[\(\[]*(.*?)\s*:\s*([0-9.]+)\s*[\)\]]*$/);
       if (explicitWeightMatch) {
         cleanText = explicitWeightMatch[1].trim();
         weight = parseFloat(explicitWeightMatch[2]);
@@ -900,6 +900,7 @@ function parseRawPrompt(rawText) {
       
       // Fallback clean text: strip extra brackets/parentheses inside if they slipped through
       cleanText = cleanText.replace(/[()\[\]]/g, '').trim();
+      cleanText = cleanText.replace(/:[0-9.]+$/, '').trim();
       if (!cleanText) continue;
       
       parsed.push({
@@ -963,7 +964,8 @@ function compilePrompts() {
       if (weight === 1.0) {
         phaseStrings.push(term);
       } else {
-        phaseStrings.push(`(${term}:${weight.toFixed(2)})`);
+        let weightStr = weight.toFixed(3).replace(/\.?0+$/, "");
+        phaseStrings.push(`(${term}:${weightStr})`);
       }
     });
     
@@ -1317,9 +1319,15 @@ function renderPhases() {
             <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
               <!-- Slider + Weight Label -->
               <div class="flex items-center gap-3 flex-grow md:flex-grow-0">
-                <span class="mono-font text-xs font-semibold w-12 text-right ${tok.isActive ? cMap.accent : 'text-slate-600'}">
-                  ${parseFloat(tok.weight).toFixed(2)}x
-                </span>
+                <input type="text" 
+                       value="${parseFloat(tok.weight).toFixed(3).replace(/\.?0+$/, '')}" 
+                       class="token-weight-input mono-font text-xs text-center rounded bg-slate-950/60 border border-slate-700/60 text-slate-200 focus:outline-none focus:border-cyan-500 w-12 py-0.5"
+                       oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                       onkeydown="if(event.key === 'Enter') { updateTokenWeightFromText('${phase.id}', '${tok.id}', this.value); this.blur(); }"
+                       onblur="updateTokenWeightFromText('${phase.id}', '${tok.id}', this.value)"
+                       id="input-weight-${phase.id}-${tok.id}"
+                       ${tok.isActive ? '' : 'disabled'}
+                >
                 
                 <input type="range" 
                        min="0.1" 
@@ -1327,9 +1335,15 @@ function renderPhases() {
                        step="0.05" 
                        value="${tok.weight}" 
                        class="custom-slider ${cMap.slider} w-24 md:w-28" 
+                       id="slider-${phase.id}-${tok.id}"
                        ${tok.isActive ? '' : 'disabled'}
                        oninput="updateTokenWeight('${phase.id}', '${tok.id}', this.value)"
                 >
+                
+                <span class="mono-font text-xs font-semibold w-12 text-left ${tok.isActive ? cMap.accent : 'text-slate-600'}"
+                      id="weight-label-${phase.id}-${tok.id}">
+                  ${parseFloat(tok.weight).toFixed(3).replace(/\.?0+$/, '')}x
+                </span>
                 
                 <button class="text-[10px] px-1.5 py-0.5 rounded border border-slate-700/60 bg-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-500 transition tooltip" 
                         data-tooltip="Reset to 1.0"
@@ -1615,15 +1629,57 @@ window.updateTokenWeight = function(phaseId, tokenId, newWeight) {
   const tokens = getPhaseTokens(phase);
   const token = tokens.find(t => t.id === tokenId);
   if (token) {
-    token.weight = parseFloat(newWeight);
+    const valFloat = parseFloat(newWeight);
+    token.weight = valFloat;
     updateOutput();
     
-    // Dynamically update the slider text label without full re-render for performance
-    // and smoothness during active drag
-    const sliderLabel = document.querySelector(`[data-phase-id="${phaseId}"] [oninput*="${tokenId}"]`).previousElementSibling;
-    if (sliderLabel) {
-      sliderLabel.innerText = parseFloat(newWeight).toFixed(2) + "x";
+    const weightStr = valFloat.toFixed(3).replace(/\.?0+$/, "");
+    
+    const label = document.getElementById(`weight-label-${phaseId}-${tokenId}`);
+    if (label) {
+      label.innerText = weightStr + "x";
     }
+    
+    const input = document.getElementById(`input-weight-${phaseId}-${tokenId}`);
+    if (input) {
+      input.value = weightStr;
+    }
+  }
+};
+
+window.updateTokenWeightFromText = function(phaseId, tokenId, textValue) {
+  const phase = state.phases.find(p => p.id === phaseId);
+  if (!phase) return;
+  
+  const tokens = getPhaseTokens(phase);
+  const token = tokens.find(t => t.id === tokenId);
+  if (token) {
+    let parsed = parseFloat(textValue);
+    if (isNaN(parsed)) {
+      parsed = token.weight;
+    }
+    
+    const clamped = Math.max(0.1, Math.min(2.0, parsed));
+    token.weight = clamped;
+    
+    const weightStr = clamped.toFixed(3).replace(/\.?0+$/, "");
+    
+    const slider = document.getElementById(`slider-${phaseId}-${tokenId}`);
+    if (slider) {
+      slider.value = clamped;
+    }
+    
+    const label = document.getElementById(`weight-label-${phaseId}-${tokenId}`);
+    if (label) {
+      label.innerText = weightStr + "x";
+    }
+    
+    const input = document.getElementById(`input-weight-${phaseId}-${tokenId}`);
+    if (input) {
+      input.value = weightStr;
+    }
+    
+    updateOutput();
   }
 };
 
