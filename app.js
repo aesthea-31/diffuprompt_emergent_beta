@@ -2766,17 +2766,19 @@ function commitToConceptHistory() {
     return;
   }
 
-  // commits 配列が存在しない旧データを移行
   if (!Array.isArray(concept.commits)) {
     concept.commits = [];
   }
+
+  // コミット前に現在のワークスペースの全フェーズ構造を強制的に確定・保証する
+  state.phases.forEach(ensurePhaseStructure);
 
   const commitIndex = concept.commits.length + 1;
   const newCommit = {
     id: "commit_" + Date.now(),
     message: `Commit #${commitIndex}`,
     timestamp: new Date().toISOString(),
-    phases: JSON.parse(JSON.stringify(state.phases)) // ワークスペースのディープコピー
+    phases: JSON.parse(JSON.stringify(state.phases)) // 完全に構造が保証されたオブジェクトをディープコピー
   };
 
   concept.commits.push(newCommit);
@@ -2784,9 +2786,7 @@ function commitToConceptHistory() {
   updateCommitButton();
   renderConceptLibrary();
 
-  showToast(
-    `✔ Commit #${commitIndex} を "${concept.name}" に保存しました（計 ${concept.commits.length} commits）`
-  );
+  showToast(`✔ Commit #${commitIndex} を "${concept.name}" に保存しました（計 ${concept.commits.length} commits）`);
 }
 
 // ---- CONCEPT ARCHIVE & EXTRA ACTIONS ----
@@ -2796,45 +2796,44 @@ window.renderConceptArchive = function() {
   if (!container) return;
   container.innerHTML = "";
 
-  if (!state.activeConcept) {
-    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">コンセプトをロードするとコミット履歴が表示されます。</p>`;
+  // 全てのコンセプトからアーカイブ（退避データ）を横断的に集約して永続表示化
+  let allArchived = [];
+  state.concepts.forEach(c => {
+    if (Array.isArray(c.archivedCommits)) {
+      c.archivedCommits.forEach(a => {
+        allArchived.push(a);
+      });
+    }
+  });
+
+  if (allArchived.length === 0) {
+    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">TIME-LINE TREE内の「○」ボタンをクリックすると、ここに選択したCommitデータが最大5件まで永続保存・表示されます。</p>`;
     return;
   }
 
-  const concept = state.concepts.find(c => c.id === state.activeConcept);
-  if (!concept) {
-    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">コンセプトが見つかりません。</p>`;
-    return;
-  }
+  // タイムスタンプ順に降順（新しい退避データが上）にソートして最大5件を描画
+  allArchived.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  allArchived = allArchived.slice(0, 5);
 
-  const commits = concept.commits || [];
-  if (commits.length === 0) {
-    container.innerHTML = `<p class="text-slate-500 text-xs text-center py-4">コミット履歴がありません。"Commit"ボタンで履歴を作成できます。</p>`;
-    return;
-  }
-
-  // Render commits in descending order
-  [...commits].reverse().forEach(commit => {
+  allArchived.forEach(arch => {
     const card = document.createElement("div");
     card.className = "flex items-center justify-between p-2.5 rounded-lg border border-slate-700/40 bg-slate-800/20 hover:bg-slate-850 hover:border-slate-600 transition group text-xs";
-
-    const dateStr = new Date(commit.timestamp).toLocaleString();
+    const dateStr = new Date(arch.timestamp).toLocaleString();
 
     card.innerHTML = `
-      <div class="flex-grow text-left">
-        <div class="font-bold text-slate-300">${commit.message}</div>
+      <div class="flex-grow text-left pr-2">
+        <div class="font-bold text-slate-300">${arch.sourceMessage} <span class="text-purple-400 font-normal ml-1">[${arch.conceptName}]</span></div>
         <div class="text-[9px] text-slate-500 font-mono mt-0.5">${dateStr}</div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="restoreCommit('${concept.id}', '${commit.id}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-300 hover:text-purple-200 transition rounded text-[10px] font-semibold">
+        <button onclick="restoreArchivedCardDirectly('${arch.conceptId}', '${arch.sourceCommitId}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-300 hover:text-purple-200 transition rounded text-[10px] font-semibold">
           Restore
         </button>
-        <button onclick="deleteCommit('${concept.id}', '${commit.id}')" class="text-rose-400 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition p-1">
+        <button onclick="deleteArchivedCommitDirectly('${arch.conceptId}', '${arch.id}')" class="text-rose-400 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition p-1">
           <i class="fa-solid fa-trash-can text-[10px]"></i>
         </button>
       </div>
     `;
-
     container.appendChild(card);
   });
 };
@@ -3076,19 +3075,25 @@ window.restoreCommitToArchive = function(conceptId, commitId) {
   const commit = (concept.commits || []).find(c => c.id === commitId);
   if (!commit) return;
 
-  if (!confirm(`「${commit.message}」の構成をSTYLE CONCEPT ARCHIVEに復元しますか？\n（ワークスペースは変更されません）`)) return;
+  if (!confirm(`「${commit.message}」の構成をSTYLE CONCEPT ARCHIVEに退避・保存しますか？\n（ワークスペースは変更されません）`)) return;
 
-  // Store in concept.archivedCommits (separate from commits[])
   if (!Array.isArray(concept.archivedCommits)) concept.archivedCommits = [];
-  // Avoid duplicates
+  
   const alreadyArchived = concept.archivedCommits.some(a => a.sourceCommitId === commitId);
   if (alreadyArchived) {
     showToast(`「${commit.message}」は既にARCHIVEに存在します。`, 'warning');
     return;
   }
 
+  // 最大5件制限：上限に達している場合は最も古いアーカイブ（先頭）を削除
+  if (concept.archivedCommits.length >= 5) {
+    concept.archivedCommits.shift();
+  }
+
   concept.archivedCommits.push({
     id: 'arch_' + Date.now(),
+    conceptId: conceptId,         // コンセプトIDを保持
+    conceptName: concept.name,     // コンセプトタイトル（テーマ名）を保持
     sourceCommitId: commitId,
     sourceMessage: commit.message,
     timestamp: commit.timestamp,
@@ -3097,7 +3102,38 @@ window.restoreCommitToArchive = function(conceptId, commitId) {
 
   saveConceptsToStorage();
   renderConceptArchive();
-  showToast(`「${commit.message}」をARCHIVEに復元しました。`, 'success');
+  showToast(`「${commit.message}」をARCHIVEに保存しました（最大5件）。`, 'success');
+};
+
+// アーカイブカード専用の復元・削除ヘルパー関数を追記
+window.restoreArchivedCardDirectly = function(conceptId, commitId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+  const commit = (concept.commits || []).find(c => c.id === commitId);
+  if (!commit) return;
+  if (!confirm(`このアーカイブから「${commit.message}」の状態をWORKSPACEに復元しますか？`)) return;
+
+  const restoredPhases = JSON.parse(JSON.stringify(commit.phases));
+  restoredPhases.forEach(ensurePhaseStructure);
+  state.phases = restoredPhases;
+  state.activeConcept = conceptId;
+  
+  if (typeof updateCommitButton === "function") updateCommitButton();
+  renderApp();
+  showToast(`アーカイブから「${commit.message}」を復元しました`);
+};
+
+window.deleteArchivedCommitDirectly = function(conceptId, archId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept || !Array.isArray(concept.archivedCommits)) return;
+  const idx = concept.archivedCommits.findIndex(a => a.id === archId);
+  if (idx === -1) return;
+  if (!confirm("このアーカイブカードを削除しますか？")) return;
+
+  concept.archivedCommits.splice(idx, 1);
+  saveConceptsToStorage();
+  renderConceptArchive();
+  showToast("アーカイブカードを削除しました", "warning");
 };
 
 /**
@@ -3372,11 +3408,11 @@ function renderDiffPhase(olderCommit, newerCommit, label) {
 
   if (orderChanged) {
     html += `<div class="diff-section-title mt-3">Phase Order</div>`;
-    html += `<div class="flex flex-col gap-1 mb-1"><div class="text-[9px] text-slate-500 mb-1">Before:</div>`;
+    html += `<div class="flex flex-row flex-wrap items-center gap-1.5 mb-1"><div class="text-[9px] text-slate-500 mb-1">Before:</div>`;
     html += commonOldPhases.map(p =>
       `<span class="phase-order-bar ${p.isNegative ? 'neg' : 'pos'}">${p.name}</span>`
     ).join('<span class="text-slate-600 mx-1 text-xs">→</span>');
-    html += `</div><div class="flex flex-col gap-1 mt-1"><div class="text-[9px] text-slate-500 mb-1">After:</div>`;
+    html += `</div><div class="flex flex-row flex-wrap items-center gap-1.5 mt-1"><div class="text-[9px] text-slate-500 mb-1">After:</div>`;
     html += commonNewPhases.map(p =>
       `<span class="phase-order-bar ${p.isNegative ? 'neg' : 'pos'}">${p.name}</span>`
     ).join('<span class="text-slate-600 mx-1 text-xs">→</span>');
