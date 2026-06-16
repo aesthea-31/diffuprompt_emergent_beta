@@ -2406,3 +2406,105 @@ input[type="range"].custom-slider::-moz-range-thumb {
   align-items: center !important;
   gap: 6px !important;
 }
+
+/* ============================================================
+   COMMIT DETAIL OVERLAY & GLASSMORPHIC MODAL STYLES
+   ============================================================ */
+.glassmorphic-modal {
+  background: rgba(12, 20, 36, 0.75) !important;
+  backdrop-filter: blur(18px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 15px rgba(168, 85, 247, 0.2) !important;
+}
+
+.tl-commit-btn {
+  background: transparent;
+  border: none;
+  color: #c084fc;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  outline: none;
+  transition: color 0.15s ease, text-shadow 0.15s ease;
+}
+.tl-commit-btn:hover {
+  color: #d8b4fe;
+  text-shadow: 0 0 8px rgba(192, 132, 252, 0.4);
+}
+
+.detail-phase-bar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 80px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.detail-phase-bar.pos {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.25);
+  color: #a7f3d0;
+}
+.detail-phase-bar.pos:hover {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+.detail-phase-bar.pos.active {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.75);
+  color: #34d399;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.detail-phase-bar.neg {
+  background: rgba(244, 63, 94, 0.08);
+  border-color: rgba(244, 63, 94, 0.25);
+  color: #fecdd3;
+}
+.detail-phase-bar.neg:hover {
+  background: rgba(244, 63, 94, 0.16);
+  border-color: rgba(244, 63, 94, 0.45);
+}
+.detail-phase-bar.neg.active {
+  background: rgba(244, 63, 94, 0.25);
+  border-color: rgba(244, 63, 94, 0.75);
+  color: #fb7185;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.25);
+}
+
+.overlay-token-row {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.2s, border-color 0.2s;
+}
+.overlay-token-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 639px) {
+  .modal-box.glassmorphic-modal {
+    max-width: 94vw !important;
+    margin: 0 auto;
+  }
+}
+
+/* REARRANGEMENT Modal & Sub-tabs Styles */
+.rearrangement-pat-btn {
+  position: relative;
+  transition: all 0.2s ease;
+}
+.rearrangement-pat-btn:hover {
+  transform: translateX(4px);
+}
+#rearrangement-modal-content {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}

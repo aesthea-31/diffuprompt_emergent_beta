@@ -2829,8 +2829,8 @@ window.renderConceptArchive = function() {
         <button onclick="restoreArchivedCardDirectly('${arch.conceptId}', '${arch.sourceCommitId}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-500/30 text-purple-300 hover:text-purple-200 transition rounded text-[10px] font-semibold">
           Restore
         </button>
-        <button onclick="deleteArchivedCommitDirectly('${arch.conceptId}', '${arch.id}')" class="text-rose-400 hover:text-rose-300 opacity-0 group-hover:opacity-100 transition p-1">
-          <i class="fa-solid fa-trash-can text-[10px]"></i>
+        <button onclick="deleteArchivedCommitDirectly('${arch.conceptId}', '${arch.id}')" class="text-rose-400 hover:text-rose-300">
+          <i class="fa-solid fa-trash-can"></i>
         </button>
       </div>
     `;
@@ -3028,7 +3028,8 @@ function renderTimelineTree(conceptId) {
         </button>
         <div class="tl-connector-line"></div>
       </div>
-      <div class="tl-label tl-label-commit">${commit.message}<br>
+      <div class="tl-label tl-label-commit">
+        <button class="tl-commit-btn" onclick="openCommitDetailOverlay('${conceptId}', '${commit.id}')">${commit.message}</button><br>
         <span class="font-mono text-[9px] text-slate-500">${dateStr}</span>
       </div>
     `;
@@ -3280,7 +3281,19 @@ function renderDiffWeight(olderCommit, newerCommit, label) {
 --------------------------------------------------------------- */
 function renderDiffToken(olderCommit, newerCommit, label) {
   let html = `<div class="diff-section-title">Token Changes — ${label}</div>`;
+
+  // 【修正②】 サブタブ（FLUCTUATION / REARRANGEMENT）の追加
+  html += `
+    <div class="flex flex-row mt-2 mb-3">
+      <button id="btn-diff-fluctuation" class="flex-1 py-1.5 text-center text-xs font-bold text-white bg-amber-500 transition" onclick="switchTokenSubTab('fluctuation')">FLUCTUATION</button>
+      <button id="btn-diff-rearrangement" class="flex-1 py-1.5 text-center text-xs font-bold text-white bg-emerald-500 opacity-50 hover:opacity-100 transition" onclick="switchTokenSubTab('rearrangement')">REARRANGEMENT</button>
+    </div>
+  `;
+
+  // --- FLUCTUATION 画面 (初期状態) ---
+  html += `<div id="token-diff-fluctuation-view">`;
   let hasChange = false;
+  let fluctHtml = '';
 
   newerCommit.phases.forEach(newPhase => {
     const oldPhase = olderCommit.phases.find(p => p.id === newPhase.id);
@@ -3294,32 +3307,222 @@ function renderDiffToken(olderCommit, newerCommit, label) {
     if (addedIds.length === 0 && removedIds.length === 0) return;
     hasChange = true;
 
-    html += `<div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase">${newPhase.name}</div>`;
+    fluctHtml += `<div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase">${newPhase.name}</div>`;
+    
+    // 【修正①】 トークン増減の文字列横に [Pattern x] を併記
     addedIds.forEach(t => {
-      html += `<div class="diff-add">+ ${t.text}</div>`;
+      let ctx = getTokenPatternContext(newPhase, t.id);
+      let patternStr = ctx ? ` <span class="text-slate-500 text-[9px] font-mono">[${ctx.replace(', ', '')}]</span>` : '';
+      fluctHtml += `<div class="diff-add">+ ${t.text}${patternStr}</div>`;
     });
     removedIds.forEach(t => {
-      html += `<div class="diff-del">- <em>${t.text}</em></div>`;
+      let ctx = getTokenPatternContext(oldPhase, t.id);
+      let patternStr = ctx ? ` <span class="text-slate-500 text-[9px] font-mono">[${ctx.replace(', ', '')}]</span>` : '';
+      fluctHtml += `<div class="diff-del">- <em>${t.text}</em>${patternStr}</div>`;
     });
   });
 
-  // Phases only in older (deleted phases)
+  // 古いコミットにしか存在しないPhase（Phase自体が削除された場合）の処理
   olderCommit.phases.forEach(oldPhase => {
     if (!newerCommit.phases.find(p => p.id === oldPhase.id)) {
       const toks = getAllPhaseTokens(oldPhase);
       if (toks.length > 0) {
         hasChange = true;
-        html += `<div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase">${oldPhase.name} (Phase削除)</div>`;
+        fluctHtml += `<div class="text-[10px] font-bold text-slate-400 mt-2 mb-1 uppercase">${oldPhase.name} (Phase削除)</div>`;
         toks.forEach(t => {
-          html += `<div class="diff-del">- <em>${t.text}</em></div>`;
+          let ctx = getTokenPatternContext(oldPhase, t.id);
+          let patternStr = ctx ? ` <span class="text-slate-500 text-[9px] font-mono">[${ctx.replace(', ', '')}]</span>` : '';
+          fluctHtml += `<div class="diff-del">- <em>${t.text}</em>${patternStr}</div>`;
         });
       }
     }
   });
 
-  if (!hasChange) html += '<p class="text-slate-600 py-4 text-center">変更なし</p>';
+  if (!hasChange) fluctHtml += '<p class="text-slate-600 py-4 text-center">変更なし</p>';
+  html += fluctHtml;
+  html += `</div>`; // FLUCTUATION view 終了
+
+  // --- REARRANGEMENT 画面 ---
+  html += `<div id="token-diff-rearrangement-view" class="hidden">`;
+  html += renderRearrangementView(olderCommit, newerCommit);
+  html += `</div>`; // REARRANGEMENT view 終了
+
   return html;
 }
+
+// =========================================================
+// 以下、新規追加関数群
+// =========================================================
+
+// サブタブ切り替え制御
+window.switchTokenSubTab = function(subTab) {
+  const fluctBtn = document.getElementById('btn-diff-fluctuation');
+  const rearrBtn = document.getElementById('btn-diff-rearrangement');
+  const fluctView = document.getElementById('token-diff-fluctuation-view');
+  const rearrView = document.getElementById('token-diff-rearrangement-view');
+  
+  if (!fluctBtn || !rearrBtn || !fluctView || !rearrView) return;
+
+  if (subTab === 'fluctuation') {
+    fluctBtn.classList.remove('opacity-50');
+    rearrBtn.classList.add('opacity-50');
+    fluctView.classList.remove('hidden');
+    rearrView.classList.add('hidden');
+  } else {
+    rearrBtn.classList.remove('opacity-50');
+    fluctBtn.classList.add('opacity-50');
+    rearrView.classList.remove('hidden');
+    fluctView.classList.add('hidden');
+  }
+};
+
+// パターン単位の変更検知
+function isPatternChanged(oldPat, newPat) {
+  if (!oldPat && !newPat) return false;
+  if (!oldPat || !newPat) return true;
+  const oldToks = oldPat.tokens || [];
+  const newToks = newPat.tokens || [];
+  if (oldToks.length !== newToks.length) return true; // 増減あり
+  for (let i = 0; i < oldToks.length; i++) {
+    if (oldToks[i].id !== newToks[i].id || 
+        oldToks[i].text !== newToks[i].text || 
+        parseFloat(oldToks[i].weight) !== parseFloat(newToks[i].weight) || 
+        oldToks[i].isActive !== newToks[i].isActive) {
+      return true; // 順序、文字、ウェイト、アクティブ状態のいずれかが変更
+    }
+  }
+  return false;
+}
+
+// REARRANGEMENT画面のレンダリング
+function renderRearrangementView(olderCommit, newerCommit) {
+  let html = '';
+  let hasAnyChange = false;
+
+  // 両方のCommitから対象となる全PhaseIDを抽出
+  const allPhaseIds = new Set([
+    ...olderCommit.phases.map(p => p.id),
+    ...newerCommit.phases.map(p => p.id)
+  ]);
+
+  allPhaseIds.forEach(phaseId => {
+    const oldPhase = olderCommit.phases.find(p => p.id === phaseId);
+    const newPhase = newerCommit.phases.find(p => p.id === phaseId);
+    let phaseChangesHtml = '';
+    const phaseName = newPhase ? newPhase.name : (oldPhase ? oldPhase.name : '');
+    const isNeg = newPhase ? newPhase.isNegative : (oldPhase ? oldPhase.isNegative : false);
+
+    if (isNeg) {
+      const oldToks = oldPhase ? (oldPhase.tokens || []) : [];
+      const newToks = newPhase ? (newPhase.tokens || []) : [];
+      if (isPatternChanged({tokens: oldToks}, {tokens: newToks})) {
+        phaseChangesHtml += `<button class="rearrangement-pat-btn block text-left text-pink-400 font-bold text-xs py-1 hover:text-pink-300 transition uppercase tracking-wide" onclick="openRearrangementModal('${phaseId}', null)">TOKENS</button>`;
+      }
+    } else {
+      const oldPats = oldPhase ? (oldPhase.patterns || []) : [];
+      const newPats = newPhase ? (newPhase.patterns || []) : [];
+      const maxLen = Math.max(oldPats.length, newPats.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (isPatternChanged(oldPats[i], newPats[i])) {
+          phaseChangesHtml += `<button class="rearrangement-pat-btn block text-left text-pink-400 font-bold text-xs py-1 hover:text-pink-300 transition uppercase tracking-wide" onclick="openRearrangementModal('${phaseId}', ${i})">PATTERN ${i + 1}</button>`;
+        }
+      }
+    }
+
+    if (phaseChangesHtml) {
+      hasAnyChange = true;
+      html += `<div class="mb-3">`;
+      html += `<div class="text-white font-bold text-sm mb-1">PHASE/${phaseName}</div>`;
+      html += phaseChangesHtml;
+      html += `</div>`;
+    }
+  });
+
+  if (!hasAnyChange) return '<p class="text-slate-600 py-4 text-center">変更なし</p>';
+  return html;
+}
+
+// 【修正③】 REARRANGEMENT モーダルの展開ロジック
+window.openRearrangementModal = function(phaseId, patternIndex) {
+  if (_activeDiffIndex === null || _timelineConceptId === null) return;
+  const concept = state.concepts.find(c => c.id === _timelineConceptId);
+  if (!concept || !concept.commits) return;
+  
+  const olderCommit = concept.commits[_activeDiffIndex];
+  const newerCommit = concept.commits[_activeDiffIndex + 1];
+  if (!olderCommit || !newerCommit) return;
+
+  const oldPhase = olderCommit.phases.find(p => p.id === phaseId);
+  const newPhase = newerCommit.phases.find(p => p.id === phaseId);
+  const phaseName = newPhase ? newPhase.name : (oldPhase ? oldPhase.name : '');
+
+  // プロンプトをテキスト並列形式（COMPILE画面形式）に整形するヘルパー
+  const formatTokens = (tokens) => {
+    if (!tokens || tokens.length === 0) return '';
+    return tokens.filter(t => t.isActive !== false).map(t => {
+      let weight = parseFloat(t.weight);
+      let term = t.text.trim();
+      if (weight === 1.0) return term;
+      let weightStr = weight.toFixed(3).replace(/\.?0+$/, "");
+      return `(${term}:${weightStr})`;
+    }).join(", ");
+  };
+
+  let oldPrompt = '';
+  let newPrompt = '';
+  let titleStr = `PHASE/ ${phaseName}`;
+
+  if (patternIndex === null) {
+    const oldToks = oldPhase ? (oldPhase.tokens || []) : [];
+    const newToks = newPhase ? (newPhase.tokens || []) : [];
+    oldPrompt = formatTokens(oldToks);
+    newPrompt = formatTokens(newToks);
+  } else {
+    titleStr += `, Pattern ${patternIndex + 1}`;
+    const oldPat = oldPhase && oldPhase.patterns ? oldPhase.patterns[patternIndex] : null;
+    const newPat = newPhase && newPhase.patterns ? newPhase.patterns[patternIndex] : null;
+    oldPrompt = formatTokens(oldPat ? oldPat.tokens : []);
+    newPrompt = formatTokens(newPat ? newPat.tokens : []);
+  }
+
+  // モーダルへ内容を注入
+  document.getElementById('rearrangement-modal-title').innerText = titleStr;
+  document.getElementById('rearrangement-old-commit-label').innerText = `${olderCommit.message}`;
+  document.getElementById('rearrangement-old-text').value = oldPrompt || '(なし)';
+  document.getElementById('rearrangement-new-commit-label').innerText = `${newerCommit.message}`;
+  document.getElementById('rearrangement-new-text').value = newPrompt || '(なし)';
+
+  // モーダル表示アクション
+  const modal = document.getElementById('rearrangement-modal');
+  const content = document.getElementById('rearrangement-modal-content');
+  modal.classList.remove('hidden');
+  setTimeout(() => {
+    content.classList.remove('scale-95');
+    content.classList.add('scale-100');
+  }, 10);
+};
+
+// モーダルを閉じるアクション
+window.closeRearrangementModal = function() {
+  const modal = document.getElementById('rearrangement-modal');
+  const content = document.getElementById('rearrangement-modal-content');
+  if (modal && !modal.classList.contains('hidden')) {
+    content.classList.remove('scale-100');
+    content.classList.add('scale-95');
+    setTimeout(() => {
+      modal.classList.add('hidden');
+    }, 150);
+  }
+};
+
+// Escapeキー押下でモーダルを閉じる対応
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (typeof window.closeRearrangementModal === 'function') {
+      window.closeRearrangementModal();
+    }
+  }
+});
 
 /* ---------------------------------------------------------------
    CORE TAB
@@ -4540,3 +4743,221 @@ function renderParamRecommender(stepsOverride) {
     return `<li class="${cls}" style="animation-delay:${i * 0.05}s">${tip}</li>`;
   }).join('');
 }
+
+// ============================================================
+//  COMMIT DETAIL OVERLAY CONTROLLERS & ACTIONS
+// ============================================================
+
+window.openCommitDetailOverlay = function(conceptId, commitId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+  const commit = (concept.commits || []).find(c => c.id === commitId);
+  if (!commit) return;
+
+  window._commitDetailOverlayState = {
+    conceptId: conceptId,
+    commitId: commitId,
+    activePhaseId: null,
+    activePatternIndex: 0
+  };
+
+  const nameEl = document.getElementById('commit-detail-concept-name');
+  if (nameEl) nameEl.textContent = concept.name;
+
+  const msgEl = document.getElementById('commit-detail-message');
+  if (msgEl) msgEl.textContent = commit.message;
+
+  const phasesContainer = document.getElementById('commit-detail-phases-container');
+  if (phasesContainer) {
+    phasesContainer.innerHTML = '';
+    (commit.phases || []).forEach(phase => {
+      const isNeg = !!phase.isNegative;
+      const bar = document.createElement('button');
+      bar.className = `detail-phase-bar ${isNeg ? 'neg' : 'pos'}`;
+      bar.textContent = phase.name;
+      bar.onclick = () => window.selectCommitDetailPhase(phase.id);
+      bar.id = `detail-phase-bar-${phase.id}`;
+      phasesContainer.appendChild(bar);
+    });
+  }
+
+  const archiveBtn = document.getElementById('commit-detail-archive-btn');
+  if (archiveBtn) {
+    archiveBtn.onclick = () => {
+      window.archiveCommitFromOverlay(conceptId, commitId);
+    };
+  }
+
+  const expandedSection = document.getElementById('commit-detail-expanded-section');
+  if (expandedSection) expandedSection.classList.add('hidden');
+
+  const modal = document.getElementById('commit-detail-modal');
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = "hidden";
+  }
+};
+
+window.closeCommitDetailOverlay = function() {
+  const modal = document.getElementById('commit-detail-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    document.body.style.overflow = "";
+  }
+};
+
+window.handleCommitDetailOverlayClick = function(e) {
+  if (e.target.id === 'commit-detail-modal') {
+    window.closeCommitDetailOverlay();
+  }
+};
+
+window.selectCommitDetailPhase = function(phaseId) {
+  const stateObj = window._commitDetailOverlayState;
+  if (!stateObj) return;
+
+  stateObj.activePhaseId = phaseId;
+  stateObj.activePatternIndex = 0;
+
+  document.querySelectorAll('.detail-phase-bar').forEach(bar => {
+    bar.classList.remove('active');
+  });
+  const activeBar = document.getElementById(`detail-phase-bar-${phaseId}`);
+  if (activeBar) {
+    activeBar.classList.add('active');
+  }
+
+  const expandedSection = document.getElementById('commit-detail-expanded-section');
+  if (expandedSection) expandedSection.classList.remove('hidden');
+
+  window.renderCommitDetailExpandedContents();
+};
+
+window.renderCommitDetailExpandedContents = function() {
+  const stateObj = window._commitDetailOverlayState;
+  if (!stateObj) return;
+
+  const concept = state.concepts.find(c => c.id === stateObj.conceptId);
+  if (!concept) return;
+  const commit = (concept.commits || []).find(c => c.id === stateObj.commitId);
+  if (!commit) return;
+  const phase = (commit.phases || []).find(p => p.id === stateObj.activePhaseId);
+  if (!phase) return;
+
+  const phaseNameEl = document.getElementById('commit-detail-active-phase-name');
+  if (phaseNameEl) phaseNameEl.textContent = phase.name;
+
+  const patternSelector = document.getElementById('commit-detail-pattern-selector');
+  if (patternSelector) {
+    if (phase.isNegative) {
+      patternSelector.classList.add('hidden');
+    } else {
+      patternSelector.classList.remove('hidden');
+      const patterns = phase.patterns || [];
+      const total = patterns.length;
+      const current = stateObj.activePatternIndex + 1;
+
+      const labelEl = document.getElementById('commit-detail-pattern-label');
+      if (labelEl) labelEl.textContent = `Pattern ${current} / ${total}`;
+
+      const prevBtn = document.getElementById('commit-detail-prev-pattern-btn');
+      const nextBtn = document.getElementById('commit-detail-next-pattern-btn');
+
+      if (prevBtn) {
+        prevBtn.disabled = current <= 1;
+        prevBtn.onclick = () => {
+          if (stateObj.activePatternIndex > 0) {
+            stateObj.activePatternIndex--;
+            window.renderCommitDetailExpandedContents();
+          }
+        };
+      }
+      if (nextBtn) {
+        nextBtn.disabled = current >= total;
+        nextBtn.onclick = () => {
+          if (stateObj.activePatternIndex < total - 1) {
+            stateObj.activePatternIndex++;
+            window.renderCommitDetailExpandedContents();
+          }
+        };
+      }
+    }
+  }
+
+  const tokensContainer = document.getElementById('commit-detail-tokens-container');
+  if (tokensContainer) {
+    tokensContainer.innerHTML = '';
+    let tokens = [];
+    if (phase.isNegative) {
+      tokens = phase.tokens || [];
+    } else {
+      const patterns = phase.patterns || [];
+      const pat = patterns[stateObj.activePatternIndex];
+      tokens = pat ? (pat.tokens || []) : [];
+    }
+
+    if (tokens.length === 0) {
+      tokensContainer.innerHTML = '<p class="text-slate-500 text-xs text-center py-4">No tokens in this phase.</p>';
+      return;
+    }
+
+    tokens.forEach(tok => {
+      const isCore = !!tok.isCore;
+      const row = document.createElement('div');
+      row.className = 'overlay-token-row flex items-center justify-between p-2.5 rounded-lg text-xs border border-slate-700/60 bg-slate-800/10 mb-1';
+      
+      const starHtml = !phase.isNegative ? `
+        <span class="text-xs mr-1">
+          <i class="fa-solid fa-star ${isCore ? 'text-amber-400' : 'text-slate-600'}"></i>
+        </span>
+      ` : '';
+
+      row.innerHTML = `
+        <div class="flex items-center gap-2">
+          ${starHtml}
+          <span class="font-medium ${tok.isActive ? 'text-slate-200' : 'text-slate-500 line-through'} break-all">
+            ${tok.text}
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-slate-500 text-[10px]">Weight:</span>
+          <input type="text" class="token-weight-input w-12 text-center rounded bg-slate-950/60 border border-slate-700/60 text-slate-200 py-0.5" value="${parseFloat(tok.weight).toFixed(2)}" readonly>
+        </div>
+      `;
+      tokensContainer.appendChild(row);
+    });
+  }
+};
+
+window.archiveCommitFromOverlay = function(conceptId, commitId) {
+  const concept = state.concepts.find(c => c.id === conceptId);
+  if (!concept) return;
+  const commit = (concept.commits || []).find(c => c.id === commitId);
+  if (!commit) return;
+
+  if (!Array.isArray(concept.archivedCommits)) concept.archivedCommits = [];
+
+  const alreadyArchived = concept.archivedCommits.some(a => a.sourceCommitId === commitId);
+  if (alreadyArchived) {
+    showToast(`「${commit.message}」は既にARCHIVEに存在します。`, 'warning');
+    return;
+  }
+
+  if (concept.archivedCommits.length >= 5) {
+    concept.archivedCommits.shift();
+  }
+
+  concept.archivedCommits.push({
+    id: 'arch_' + Date.now(),
+    conceptId: conceptId,
+    conceptName: concept.name,
+    sourceCommitId: commitId,
+    sourceMessage: commit.message,
+    timestamp: commit.timestamp,
+    phases: JSON.parse(JSON.stringify(commit.phases))
+  });
+
+  saveConceptsToStorage();
+  window.renderConceptArchive();
+  showToast(`「${commit.message}」をARCHIVEに保存しました`, 'success');
+};
